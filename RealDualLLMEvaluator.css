@@ -1,0 +1,438 @@
+# Real Dual-LLM Evaluation System - CSS Styles
+
+.real-dual-llm-evaluator {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+}
+
+.evaluator-header {
+  text-align: center;
+  margin-bottom: 30px;
+  color: white;
+}
+
+.evaluator-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.evaluator-header p {
+  font-size: 1.2rem;
+  opacity: 0.9;
+  margin-bottom: 20px;
+}
+
+.api-status {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.api-status-card {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 15px 25px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.api-status-card.connected {
+  border-left: 4px solid #10b981;
+}
+
+.api-status-card.error {
+  border-left: 4px solid #ef4444;
+}
+
+.api-status-card h3 {
+  margin: 0 0 5px 0;
+  color: #1f2937;
+  font-size: 1.1rem;
+}
+
+.api-status-card p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.evaluation-controls {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 25px;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 30px;
+}
+
+.evaluation-controls h2 {
+  color: #1f2937;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+}
+
+.citation-input {
+  margin-bottom: 20px;
+}
+
+.citation-input label {
+  display: block;
+  margin-bottom: 8px;
+  color: #374151;
+  font-weight: 600;
+}
+
+.citation-input input,
+.citation-input textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.citation-input input:focus,
+.citation-input textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.citation-input textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.evaluate-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
+}
+
+.evaluate-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+.evaluate-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.evaluation-progress {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  text-align: center;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.evaluation-results {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 25px;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 20px;
+}
+
+.evaluation-results h2 {
+  color: #1f2937;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+}
+
+.llm-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.llm-evaluation {
+  background: #f9fafb;
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+}
+
+.llm-evaluation.gpt4 {
+  border-color: #10b981;
+}
+
+.llm-evaluation.claude {
+  border-color: #f59e0b;
+}
+
+.llm-evaluation h3 {
+  margin: 0 0 15px 0;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.llm-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+}
+
+.llm-badge.gpt4 {
+  background: #10b981;
+}
+
+.llm-badge.claude {
+  background: #f59e0b;
+}
+
+.decision-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.decision-badge.include {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.decision-badge.exclude {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.decision-badge.conflict {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.confidence-score {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.confidence-score.high {
+  color: #059669;
+}
+
+.confidence-score.medium {
+  color: #d97706;
+}
+
+.confidence-score.low {
+  color: #dc2626;
+}
+
+.reasoning-text {
+  color: #4b5563;
+  line-height: 1.6;
+  margin-bottom: 15px;
+}
+
+.final-decision {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.final-decision h3 {
+  margin: 0 0 10px 0;
+  font-size: 1.3rem;
+}
+
+.final-decision .decision-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 16px;
+  padding: 8px 20px;
+}
+
+.agreement-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.metric-card {
+  background: #f9fafb;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid #e5e7eb;
+}
+
+.metric-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 5px;
+}
+
+.metric-label {
+  color: #6b7280;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.human-review-alert {
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  padding: 15px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.human-review-alert .icon {
+  color: #d97706;
+  font-size: 20px;
+}
+
+.human-review-alert .text {
+  color: #92400e;
+  font-weight: 600;
+}
+
+.export-controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.export-button {
+  background: #374151;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.export-button:hover {
+  background: #1f2937;
+}
+
+.picott-criteria {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.picott-criteria h3 {
+  color: #1f2937;
+  margin-bottom: 15px;
+}
+
+.criteria-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 15px;
+}
+
+.criteria-item {
+  background: #f9fafb;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+
+.criteria-item h4 {
+  margin: 0 0 8px 0;
+  color: #1f2937;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.criteria-item p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .real-dual-llm-evaluator {
+    padding: 15px;
+  }
+  
+  .evaluator-header h1 {
+    font-size: 2rem;
+  }
+  
+  .llm-comparison {
+    grid-template-columns: 1fr;
+  }
+  
+  .api-status {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .agreement-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+

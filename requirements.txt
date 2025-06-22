@@ -1,0 +1,9 @@
+# Core dependencies for LLM-based systematic review screening
+rispy>=0.7.0
+openai>=0.27.0
+bibtexparser>=1.4.0
+lxml>=4.9.0
+biopython>=1.81
+Flask
+
+# Add future dependencies below as needed (e.g., for UI, batch processing, etc.) 
