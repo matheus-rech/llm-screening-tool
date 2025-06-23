@@ -461,7 +461,8 @@
                          <div class="card-header"><h3 class="text-lg font-semibold">Processing Queue</h3></div>
                         <div class="p-4">
                             <div class="flex justify-center items-center h-40 border-2 border-dashed border-gray-600 rounded-md text-gray-500">
-                                <p class="text-center">Drag & drop XML, RIS, SCRN files here or <button class="text-blue-400 hover:underline">browse</button>.</p>
+                                <input type="file" id="fileInput" accept=".xml,.ris,.scrn,.bib,.csv,.txt" multiple style="display: none;" />
+                                <p class="text-center">Drag & drop XML, RIS, SCRN files here or <button class="text-blue-400 hover:underline" onclick="document.getElementById('fileInput').click()">browse</button>.</p>
                             </div>
                         </div>
                     </div>
