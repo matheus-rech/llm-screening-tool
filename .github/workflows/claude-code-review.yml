@@ -58,67 +58,12 @@ jobs:
         echo "Changed files:"
         cat changed_files.txt
     
-    - name: Claude Code Review
-      uses: anthropics/claude-code-review@v1
-      with:
-        anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        focus-area: ${{ github.event.inputs.focus_area || 'general' }}
-        review-prompt: |
-          Please review this LLM screening tool for systematic reviews. Focus on:
-          
-          1. **Code Quality & Architecture**:
-             - Review code structure and design patterns
-             - Check for proper error handling and logging
-             - Validate database operations and migrations
-             - Assess API integration patterns
-          
-          2. **Security & Best Practices**:
-             - API key handling and secrets management
-             - Input validation and sanitization
-             - File upload security
-             - Database security practices
-          
-          3. **Performance & Scalability**:
-             - Concurrent processing efficiency
-             - Database query optimization
-             - Memory usage patterns
-             - API rate limiting implementation
-          
-          4. **Testing & Reliability**:
-             - Test coverage and quality
-             - Error scenarios coverage
-             - Edge case handling
-             - Integration test completeness
-          
-          5. **Documentation & Maintainability**:
-             - Code documentation quality
-             - Configuration management
-             - Deployment considerations
-             - User documentation completeness
-          
-          **Project Context**:
-          This is a Python Flask application that uses dual LLM models (conservative/liberal) 
-          to screen academic papers for systematic reviews. It processes various file formats 
-          (RIS, BibTeX, CSV, XML) and provides conflict resolution for disagreements between models.
-          
-          **Recent Improvements Made**:
-          - Added comprehensive testing framework with pytest
-          - Implemented robust error handling with retry logic
-          - Added database migration system with Flask-Migrate
-          - Optimized concurrency and threading performance
-          - Enhanced configuration management with validation
-          
-          Please provide specific, actionable feedback and suggestions for improvement.
-        
-        max-files: 20
-        exclude-patterns: |
-          *.pyc
-          __pycache__/*
-          .git/*
-          test_data/*
-          uploads/*
-          results/*
+    - name: Claude Code Review (Manual)
+      run: |
+        echo "🤖 Claude Code Review would be performed here"
+        echo "The anthropics/claude-code-review@v1 action is not available in GitHub marketplace"
+        echo "For manual Claude review, use: claude-code review --focus='LLM integration, error handling, security'"
+        echo "Review context has been prepared in previous steps"
     
     - name: Comment test results
       if: github.event_name == 'pull_request'
@@ -193,6 +138,11 @@ jobs:
   security-scan:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      security-events: write
     
     steps:
     - name: Checkout code
@@ -206,6 +156,7 @@ jobs:
     - name: Security Scan Results
       uses: actions/github-script@v7
       with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs');
           
@@ -233,7 +184,9 @@ jobs:
                 repo: context.repo.repo,
                 body: comment
               });
+            } else {
+              console.log('✅ No security issues found');
             }
           } catch (e) {
-            console.log('No security report generated or parsing failed');
+            console.log('No security report generated or parsing failed:', e.message);
           }
