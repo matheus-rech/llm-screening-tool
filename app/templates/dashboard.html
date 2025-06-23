@@ -695,7 +695,7 @@ function llmScreeningTool() {
         },
         model2: { 
             provider: 'openai',
-            model_name: 'gpt-4o',
+            model_name: 'o3',
             api_key: '',
             api_endpoint: '',
             temperature: 0.1,
@@ -833,13 +833,15 @@ function llmScreeningTool() {
         getAvailableModels(provider) {
             const modelOptions = {
                 'openai': [
+                    { value: 'o3-mini', label: 'o3-mini (Latest)' },
+                    { value: 'o3', label: 'o3 (Latest)' },
                     { value: 'gpt-4o', label: 'GPT-4o' },
                     { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
                     { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
                     { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' }
                 ],
                 'anthropic': [
-                    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+                    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Latest)' },
                     { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
                     { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' }
                 ],
