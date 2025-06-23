@@ -24,6 +24,30 @@ from app.services.utils.exceptions import APIError, ValidationError
 logger = logging.getLogger(__name__)
 
 # ============================================================================
+# ============================================================================
+
+@dataclass
+class ModelConfig:
+    """Configuration for LLM providers."""
+    provider: str  # 'openai' or 'anthropic'
+    model_name: str
+    temperature: float = 0.1
+    seed: Optional[int] = None
+    max_tokens: Optional[int] = None
+    
+    def __post_init__(self):
+        if self.temperature < 0 or self.temperature > 2:
+            raise ValueError("Temperature must be between 0 and 2")
+        if self.seed is not None and (self.seed < 0 or self.seed > 2**32):
+            raise ValueError("Seed must be between 0 and 2^32")
+
+@dataclass 
+class DualModelConfig:
+    """Configuration for both LLM providers."""
+    openai_config: ModelConfig
+    anthropic_config: ModelConfig
+
+# ============================================================================
 # PYDANTIC MODELS FOR STRUCTURED OUTPUTS
 # ============================================================================
 
@@ -133,9 +157,9 @@ class ScreeningCriteria:
 class OpenAIProvider:
     """OpenAI provider using latest GPT models."""
     
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, config: ModelConfig):
         self.client = OpenAI(api_key=api_key)
-        self.model_name = "gpt-4o"
+        self.config = config
         self.provider_name = "openai"
     
     @retry_with_backoff(max_retries=3)
@@ -149,9 +173,9 @@ class OpenAIProvider:
         prompt = self._build_screening_prompt(abstract, title, criteria)
         
         try:
-            response = self.client.beta.chat.completions.parse(
-                model=self.model_name,
-                messages=[
+            request_params = {
+                "model": self.config.model_name,
+                "messages": [
                     {
                         "role": "system", 
                         "content": "You are an expert systematic review researcher. Analyze the provided abstract against the given criteria and provide a comprehensive structured assessment."
@@ -161,9 +185,17 @@ class OpenAIProvider:
                         "content": prompt
                     }
                 ],
-                response_format=ComprehensiveScreeningResult,
-                temperature=0.1
-            )
+                "response_format": ComprehensiveScreeningResult,
+                "temperature": self.config.temperature
+            }
+            
+            if self.config.max_tokens is not None:
+                request_params["max_tokens"] = self.config.max_tokens
+            
+            if self.config.seed is not None:
+                request_params["seed"] = self.config.seed
+            
+            response = self.client.beta.chat.completions.parse(**request_params)
             
             # Track usage for cost monitoring (temporarily disabled)
             # if hasattr(response, 'usage'):
@@ -178,7 +210,7 @@ class OpenAIProvider:
             
             # Add provider metadata
             result.llm_provider = self.provider_name
-            result.model_name = self.model_name
+            result.model_name = self.config.model_name
             
             return result
             
@@ -225,9 +257,9 @@ class OpenAIProvider:
 class AnthropicProvider:
     """Anthropic provider using latest Claude models."""
     
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, config: ModelConfig):
         self.client = Anthropic(api_key=api_key)
-        self.model_name = "claude-3-5-sonnet-20241022"
+        self.config = config
         self.provider_name = "anthropic"
     
     @retry_with_backoff(max_retries=3)
@@ -241,18 +273,20 @@ class AnthropicProvider:
         prompt = self._build_screening_prompt(abstract, title, criteria)
         
         try:
-            response = self.client.messages.create(
-                model=self.model_name,
-                max_tokens=4000,
-                temperature=0.1,
-                system="You are an expert systematic review researcher. Analyze the provided abstract against the given criteria and provide a comprehensive structured assessment. Respond ONLY with valid JSON matching the required schema.",
-                messages=[
+            request_params = {
+                "model": self.config.model_name,
+                "max_tokens": self.config.max_tokens or 4000,
+                "temperature": self.config.temperature,
+                "system": "You are an expert systematic review researcher. Analyze the provided abstract against the given criteria and provide a comprehensive structured assessment. Respond ONLY with valid JSON matching the required schema.",
+                "messages": [
                     {
                         "role": "user",
                         "content": prompt
                     }
                 ]
-            )
+            }
+            
+            response = self.client.messages.create(**request_params)
             
             # Track usage for cost monitoring (temporarily disabled)
             # if hasattr(response, 'usage'):
@@ -270,7 +304,7 @@ class AnthropicProvider:
             
             # Add provider metadata
             result.llm_provider = self.provider_name
-            result.model_name = self.model_name
+            result.model_name = self.config.model_name
             
             return result
             
@@ -328,9 +362,9 @@ class AnthropicProvider:
 class DualProviderScreeningOrchestrator:
     """Orchestrates screening using both OpenAI and Anthropic providers."""
     
-    def __init__(self, openai_api_key: str, anthropic_api_key: str):
-        self.openai_provider = OpenAIProvider(openai_api_key)
-        self.anthropic_provider = AnthropicProvider(anthropic_api_key)
+    def __init__(self, openai_api_key: str, anthropic_api_key: str, config: DualModelConfig):
+        self.openai_provider = OpenAIProvider(openai_api_key, config.openai_config)
+        self.anthropic_provider = AnthropicProvider(anthropic_api_key, config.anthropic_config)
         
     def screen_article_dual_provider(self, 
                                    article: Article, 
