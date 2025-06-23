@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production LLM Screening Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            color: #E0E0E0;
+            background-color: #1a202c;
+        }
+        .header {
+            background-color: #2c3e50;
+        }
+        .red-border-textarea {
+            border: 1px solid #e53e3e;
+        }
+        .sidebar {
+            width: 280px;
+            min-width: 280px;
+        }
+        .main-content {
+            flex-grow: 1;
+        }
+        .monospace {
+            font-family: 'Roboto Mono', monospace;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25em 0.6em;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 9999px;
+        }
+        .status-green {
+            background-color: #38a169;
+            color: white;
+        }
+        .status-red {
+            background-color: #e53e3e;
+            color: white;
+        }
+        .status-yellow {
+            background-color: #d69e2e;
+            color: white;
+        }
+        .card {
+            background-color: #2d3748;
+            border: 1px solid #4a5568;
+            border-radius: 0.5rem;
+        }
+        .card-header {
+            background-color: #4a5568;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #2d3748;
+            cursor: pointer;
+        }
+        .pico-score {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .pico-label {
+            width: 100px;
+            font-weight: 600;
+        }
+        .pico-bar-container {
+            flex-grow: 1;
+            background-color: #4a5568;
+            border-radius: 0.25rem;
+            overflow: hidden;
+            height: 20px;
+        }
+        .pico-bar {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: white;
+            font-weight: bold;
+        }
+        .scroll-container::-webkit-scrollbar {
+            height: 8px;
+        }
+        .scroll-container::-webkit-scrollbar-track {
+            background: #2d3748;
+        }
+        .scroll-container::-webkit-scrollbar-thumb {
+            background: #4a5568;
+            border-radius: 4px;
+        }
+        .scroll-container::-webkit-scrollbar-thumb:hover {
+            background: #718096;
+        }
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .tab-button.active {
+            border-bottom-color: #3b82f6;
+            color: #3b82f6;
+        }
+        .tab-button:hover {
+            color: #93c5fd;
+        }
+        [x-cloak] { display: none; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+</head>
+<body x-data="llmScreeningTool()">
+    <!-- Header -->
+    <header class="header text-white p-4 shadow-md">
+        <div class="container mx-auto">
+            <h1 class="text-2xl font-bold">Production LLM Screening Tool</h1>
+            <p class="text-sm opacity-80">Dual AI Screening with Real-time Logging and Audit Trail Generation</p>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="bg-gray-800 border-b border-gray-700">
+        <div class="container mx-auto px-4">
+            <nav class="flex space-x-0">
+                <button @click="activeTab = 'dashboard'" 
+                        :class="activeTab === 'dashboard' ? 'active' : ''"
+                        class="tab-button">
+                    🏠 Dashboard
+                </button>
+                <button @click="activeTab = 'configuration'" 
+                        :class="activeTab === 'configuration' ? 'active' : ''"
+                        class="tab-button">
+                    ⚙️ Configuration
+                </button>
+                <button @click="activeTab = 'screening'" 
+                        :class="activeTab === 'screening' ? 'active' : ''"
+                        class="tab-button">
+                    🔍 Screening
+                </button>
+                <button @click="activeTab = 'projects'" 
+                        :class="activeTab === 'projects' ? 'active' : ''"
+                        class="tab-button">
+                    📁 Projects
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto p-4">
+        
+        <!-- Dashboard Tab -->
+        <div x-show="activeTab === 'dashboard'" x-cloak>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <!-- Quick Stats -->
+                <div class="card">
+                    <div class="card-header"><h3 class="text-lg font-semibold">Quick Stats</h3></div>
+                    <div class="p-4 space-y-2 text-sm">
+                        <p>Total Projects: <span class="font-bold float-right">{{ projects|length }}</span></p>
+                        <p>Total Articles: <span class="font-bold float-right">0</span></p>
+                        <p>Included: <span class="font-bold float-right text-green-400">0</span></p>
+                        <p>Excluded: <span class="font-bold float-right text-red-400">0</span></p>
+                        <p>Conflicts: <span class="font-bold float-right text-yellow-400">0</span></p>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header"><h3 class="text-lg font-semibold">Quick Actions</h3></div>
+                    <div class="p-4 space-y-2">
+                        <a href="{{ url_for('main.create_project') }}" class="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-4 rounded-lg text-sm font-medium">
+                            New Project
+                        </a>
+                        <button @click="activeTab = 'configuration'" class="block w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg text-sm font-medium">
+                            Configure PICO
+                        </button>
+                        <button @click="activeTab = 'screening'" class="block w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm font-medium">
+                            Start Screening
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- System Status -->
+                <div class="card">
+                    <div class="card-header"><h3 class="text-lg font-semibold">System Status</h3></div>
+                    <div class="p-4 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm">Model 1 (Conservative):</span>
+                            <span :class="`status-badge status-${model1.status.color}`" x-text="model1.status.text"></span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm">Model 2 (Pragmatic):</span>
+                            <span :class="`status-badge status-${model2.status.color}`" x-text="model2.status.text"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recent Projects -->
+            <div class="card">
+                <div class="card-header"><h2 class="text-xl font-semibold">Recent Projects</h2></div>
+                <div class="p-4">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {% for project in projects %}
+                        <div class="card hover:bg-gray-600 transition-colors">
+                            <div class="p-4">
+                                <h3 class="font-bold text-lg mb-2">{{ project.name }}</h3>
+                                <p class="text-sm text-gray-400 mb-4">{{ project.description or 'No description' }}</p>
+                                
+                                <!-- Project Stats -->
+                                <div class="grid grid-cols-3 gap-2 mb-4 text-center text-xs">
+                                    <div>
+                                        <p class="text-xl font-bold">{{ project.articles|length if project.articles else 0 }}</p>
+                                        <p class="text-gray-400">Articles</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xl font-bold text-green-400">0</p>
+                                        <p class="text-gray-400">Included</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xl font-bold text-red-400">0</p>
+                                        <p class="text-gray-400">Excluded</p>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="flex space-x-2">
+                                    <button @click="activeTab = 'screening'" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-4 rounded-lg text-sm font-medium">
+                                        Continue Screening
+                                    </button>
+                                    <button class="bg-gray-600 hover:bg-gray-500 text-white p-2 rounded-lg text-sm">
+                                        ⚙️
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        <!-- Add New Project Card -->
+                        <div class="card border-dashed border-2 border-gray-600 hover:border-blue-500 transition-colors">
+                            <div class="p-4 text-center">
+                                <div class="text-4xl text-gray-600 mb-2">+</div>
+                                <h3 class="font-semibold mb-2">New Project</h3>
+                                <a href="{{ url_for('main.create_project') }}" 
+                                   class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium">
+                                    Create Project
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Tab -->
+        <div x-show="activeTab === 'configuration'" x-cloak>
+            <!-- Configuration Section -->
+            <div class="card mb-4" x-data="{ expanded: true }">
+                <div class="card-header flex justify-between items-center" @click="expanded = !expanded">
+                    <h2 class="text-xl font-semibold">PICO-TT Configuration</h2>
+                    <button x-text="expanded ? 'Collapse' : 'Expand'" class="text-sm text-blue-300 hover:underline"></button>
+                </div>
+                <div x-show="expanded" class="p-4" x-transition>
+                    <!-- Research Question -->
+                    <div class="mb-4">
+                        <label for="research-question" class="block font-semibold mb-2">Research Question</label>
+                        <textarea id="research-question" rows="2" class="w-full p-2 bg-gray-700 border border-red-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 red-border-textarea" placeholder="Enter the primary research question here..."></textarea>
+                    </div>
+
+                    <!-- PICO-TT Framework -->
+                    <div class="mb-4">
+                        <h3 class="font-semibold mb-2">PICO-TT Framework</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <textarea class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="Population: e.g., Adults with Type 2 Diabetes"></textarea>
+                            <textarea class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="Intervention: e.g., Metformin treatment"></textarea>
+                            <textarea class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="Comparison: e.g., Placebo or other active drug"></textarea>
+                            <textarea class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="Outcomes: e.g., HbA1c levels, cardiovascular events"></textarea>
+                            <textarea class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="Time Frame: e.g., Minimum 6 months follow-up"></textarea>
+                            <textarea class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="Study Types: e.g., Randomized Controlled Trials"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Inclusion/Exclusion Criteria -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <h3 class="font-semibold mb-2 text-green-400">Inclusion Criteria</h3>
+                            <div class="space-y-2">
+                                <input type="text" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="Criterion 1...">
+                                <input type="text" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="Criterion 2...">
+                                <button class="text-sm text-blue-300 hover:underline">+ Add Criterion</button>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold mb-2 text-red-400">Exclusion Criteria</h3>
+                            <div class="space-y-2">
+                                <input type="text" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="Criterion 1...">
+                                <input type="text" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="Criterion 2...">
+                                <button class="text-sm text-blue-300 hover:underline">+ Add Criterion</button>
+                            </div>
+                        </div>
+                    </div>
+                     <!-- Action Buttons -->
+                    <div class="flex justify-end space-x-2">
+                        <button class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-md text-white font-semibold shadow-md">Test Criteria</button>
+                        <button class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-md text-white font-semibold shadow-md">Load Template</button>
+                        <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white font-semibold shadow-md">Save Template</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LLM Setup -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                <!-- AI Model 1 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="text-lg font-semibold">AI Model 1 (Conservative)</h2>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        <select class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md">
+                            <option>Claude (Anthropic)</option>
+                            <option>OpenAI (GPT-4)</option>
+                            <option>Ollama (Local)</option>
+                            <option>LM Studio (Local)</option>
+                        </select>
+                        <input type="password" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="API Key">
+                        <input type="text" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="API Endpoint (if local)">
+                        <div class="flex items-center justify-between">
+                            <span :class="`status-badge status-${model1.status.color}`" x-text="model1.status.text"></span>
+                            <button @click="testConnection('model1')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-md text-sm font-semibold shadow">Test Connection</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Model 2 -->
+                <div class="card">
+                    <div class="card-header">
+                         <h2 class="text-lg font-semibold">AI Model 2 (Pragmatic)</h2>
+                    </div>
+                    <div class="p-4 space-y-3">
+                        <select class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md">
+                            <option>OpenAI (GPT-3.5 Turbo)</option>
+                            <option>Claude (Anthropic)</option>
+                            <option>Ollama (Local)</option>
+                            <option>LM Studio (Local)</option>
+                        </select>
+                        <input type="password" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="API Key">
+                        <input type="text" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="API Endpoint (if local)">
+                         <div class="flex items-center justify-between">
+                            <span :class="`status-badge status-${model2.status.color}`" x-text="model2.status.text"></span>
+                            <button @click="testConnection('model2')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-md text-sm font-semibold shadow">Test Connection</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Screening Tab -->
+        <div x-show="activeTab === 'screening'" x-cloak>
+            <!-- Included Studies Carousel -->
+            <div class="card mb-4">
+                <div class="card-header"><h2 class="text-xl font-semibold">Included Studies Highlights</h2></div>
+                <div class="p-4">
+                    <div class="flex space-x-4 overflow-x-auto pb-4 scroll-container">
+                        <template x-for="study in studies.filter(s => s.status.text === 'Included')" :key="study.id">
+                            <div class="card flex-shrink-0 w-80">
+                                <div class="p-4">
+                                    <p class="font-bold text-base truncate" x-text="study.title"></p>
+                                    <p class="text-sm text-gray-400 mb-3" x-text="`${study.authors} (${study.year})`"></p>
+                                    <div class="text-xs mb-3">
+                                        <p>M1 Conf: <span class="font-semibold text-green-400" x-text="`${study.model1.confidence}%`"></span></p>
+                                        <p>M2 Conf: <span class="font-semibold text-green-400" x-text="`${study.model2.confidence}%`"></span></p>
+                                    </div>
+                                    <button @click="selectedStudy = study" class="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-sm font-semibold shadow">View Details</button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="flex flex-col md:flex-row gap-4">
+                <!-- Left Sidebar -->
+                <aside class="sidebar flex-shrink-0">
+                    <div class="card mb-4">
+                        <div class="card-header"><h3 class="text-lg font-semibold">Statistics</h3></div>
+                        <div class="p-4 space-y-2 text-sm">
+                            <p>Total References: <span class="font-bold float-right">1500</span></p>
+                            <p>Processed: <span class="font-bold float-right">750 / 1500 (50%)</span></p>
+                            <p>Included: <span class="font-bold float-right text-green-400">50</span></p>
+                            <p>Excluded: <span class="font-bold float-right text-red-400">680</span></p>
+                            <p>Conflict: <span class="font-bold float-right text-yellow-400">20</span></p>
+                        </div>
+                    </div>
+                    <div class="card mb-4">
+                         <div class="card-header"><h3 class="text-lg font-semibold">Processing Queue</h3></div>
+                        <div class="p-4">
+                            <div class="flex justify-center items-center h-40 border-2 border-dashed border-gray-600 rounded-md text-gray-500">
+                                <p class="text-center">Drag & drop XML, RIS, SCRN files here or <button class="text-blue-400 hover:underline">browse</button>.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                         <div class="card-header"><h3 class="text-lg font-semibold">Live Logging</h3></div>
+                        <div class="p-2 h-96 overflow-y-auto bg-gray-900 rounded-b-md">
+                            <div class="monospace text-xs space-y-1">
+                                <template x-for="log in logs" :key="log.id">
+                                    <p><span class="text-gray-500" x-text="log.time"></span> <span :class="log.color" x-text="log.message"></span></p>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Right Content: Reference List -->
+                <main class="main-content">
+                    <div class="card">
+                        <div class="card-header"><h2 class="text-xl font-semibold">Reference List</h2></div>
+                        <div class="p-4 space-y-3">
+                            <template x-for="study in studies" :key="study.id">
+                               <div class="card" x-data="{ expanded: false }">
+                                    <div @click="expanded = !expanded" class="p-3 flex justify-between items-center cursor-pointer hover:bg-gray-700">
+                                        <div>
+                                            <p class="font-bold" x-text="study.title"></p>
+                                            <p class="text-sm text-gray-400" x-text="`${study.authors} (${study.year})`"></p>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                             <span class="status-badge" :class="study.status.class" x-text="study.status.text"></span>
+                                             <span x-show="study.agreement === 'Conflict'" class="status-badge status-yellow">Conflict</span>
+                                             <span x-show="study.agreement === 'Agreement'" class="status-badge status-green">Agreement</span>
+                                        </div>
+                                    </div>
+                                    <div x-show="expanded" x-cloak class="p-4 border-t border-gray-600" x-transition>
+                                        <h4 class="font-semibold mb-2">Abstract</h4>
+                                        <p class="text-sm text-gray-300 mb-4" x-text="study.abstract"></p>
+                                        <h4 class="font-semibold mb-2">PICO-TT Scoring</h4>
+                                        <div class="mb-4">
+                                            <template x-for="score in study.pico" :key="score.label">
+                                                <div class="pico-score">
+                                                    <span class="pico-label" x-text="score.label"></span>
+                                                    <div class="pico-bar-container">
+                                                        <div class="pico-bar" :style="`width: ${score.value}%; background-color: ${picoColor(score.value)}`" x-text="`${score.value}%`"></div>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <h4 class="font-semibold mb-2">AI Analysis</h4>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                            <div class="bg-gray-800 p-3 rounded">
+                                                <p class="font-bold mb-1">Model 1 (Conservative)</p>
+                                                <p><span class="font-semibold">Decision:</span> <span :class="study.model1.decision === 'Include' ? 'text-green-400' : 'text-red-400'" x-text="study.model1.decision"></span></p>
+                                                <p><span class="font-semibold">Confidence:</span> <span x-text="`${study.model1.confidence}%`"></span></p>
+                                                <p class="mt-2"><span class="font-semibold">Reasoning:</span> <span class="text-gray-400" x-text="study.model1.reasoning"></span></p>
+                                            </div>
+                                            <div class="bg-gray-800 p-3 rounded">
+                                                <p class="font-bold mb-1">Model 2 (Pragmatic)</p>
+                                                <p><span class="font-semibold">Decision:</span> <span :class="study.model2.decision === 'Include' ? 'text-green-400' : 'text-red-400'" x-text="study.model2.decision"></span></p>
+                                                <p><span class="font-semibold">Confidence:</span> <span x-text="`${study.model2.confidence}%`"></span></p>
+                                                <p class="mt-2"><span class="font-semibold">Reasoning:</span> <span class="text-gray-400" x-text="study.model2.reasoning"></span></p>
+                                            </div>
+                                        </div>
+                                         <div class="mt-4 flex justify-end space-x-2">
+                                            <button class="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded text-sm">Add Note</button>
+                                            <button class="px-3 py-1 bg-yellow-600 hover:bg-yellow-500 rounded text-sm">Flag for Review</button>
+                                            <button class="px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-sm">Override: Exclude</button>
+                                            <button class="px-3 py-1 bg-green-600 hover:bg-green-500 rounded text-sm">Override: Include</button>
+                                        </div>
+                                    </div>
+                               </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Live Data Table -->
+                     <div class="mt-4 card">
+                        <div class="card-header"><h2 class="text-xl font-semibold">Screening Results</h2></div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-gray-700 text-xs uppercase">
+                                    <tr>
+                                        <th class="px-4 py-2">Study</th>
+                                        <th class="px-4 py-2">Model 1</th>
+                                        <th class="px-4 py-2">Model 2</th>
+                                        <th class="px-4 py-2">Agreement</th>
+                                        <th class="px-4 py-2">Final Decision</th>
+                                        <th class="px-4 py-2">Timestamp</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-700">
+                                    <template x-for="study in studies" :key="study.id">
+                                        <tr class="hover:bg-gray-700">
+                                            <td class="px-4 py-2 font-medium" x-text="study.title"></td>
+                                            <td class="px-4 py-2" :class="study.model1.decision === 'Include' ? 'text-green-400' : 'text-red-400'" x-text="study.model1.decision"></td>
+                                            <td class="px-4 py-2" :class="study.model2.decision === 'Include' ? 'text-green-400' : 'text-red-400'" x-text="study.model2.decision"></td>
+                                            <td class="px-4 py-2">
+                                                <span class="status-badge text-xs" :class="study.agreement === 'Conflict' ? 'status-yellow' : 'status-green'" x-text="study.agreement"></span>
+                                            </td>
+                                            <td class="px-4 py-2">
+                                                 <span class="status-badge text-xs" :class="study.status.class" x-text="study.status.text"></span>
+                                            </td>
+                                            <td class="px-4 py-2 text-gray-400 monospace" x-text="new Date().toISOString().substr(11, 8)"></td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+
+        <!-- Projects Tab -->
+        <div x-show="activeTab === 'projects'" x-cloak>
+            <div class="card">
+                <div class="card-header"><h2 class="text-xl font-semibold">All Projects</h2></div>
+                <div class="p-4">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {% for project in projects %}
+                        <div class="card hover:bg-gray-600 transition-colors">
+                            <div class="p-4">
+                                <h3 class="font-bold text-lg mb-2">{{ project.name }}</h3>
+                                <p class="text-sm text-gray-400 mb-4">{{ project.description or 'No description' }}</p>
+                                <p class="text-xs text-gray-500 mb-4">Created: {{ project.created_at.strftime('%Y-%m-%d') if project.created_at else 'Unknown' }}</p>
+                                
+                                <!-- Project Stats -->
+                                <div class="grid grid-cols-3 gap-2 mb-4 text-center text-xs">
+                                    <div>
+                                        <p class="text-xl font-bold">{{ project.articles|length if project.articles else 0 }}</p>
+                                        <p class="text-gray-400">Articles</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xl font-bold text-green-400">0</p>
+                                        <p class="text-gray-400">Included</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xl font-bold text-red-400">0</p>
+                                        <p class="text-gray-400">Excluded</p>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="flex space-x-2">
+                                    <button @click="activeTab = 'screening'" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-4 rounded-lg text-sm font-medium">
+                                        Open Project
+                                    </button>
+                                    <button class="bg-gray-600 hover:bg-gray-500 text-white p-2 rounded-lg text-sm">
+                                        ⚙️
+                                    </button>
+                                    <button class="bg-red-600 hover:bg-red-500 text-white p-2 rounded-lg text-sm">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Details Modal -->
+    <div x-show="selectedStudy" x-cloak
+        class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"
+        @click.self="selectedStudy = null" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0">
+        <div x-show="selectedStudy" class="card w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+             x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100" x-transition:leave="ease-in duration-200"
+             x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95">
+            <template x-if="selectedStudy">
+                <div>
+                    <div class="card-header flex justify-between items-center sticky top-0">
+                        <h3 class="text-lg font-bold" x-text="selectedStudy.title"></h3>
+                        <button @click="selectedStudy = null" class="text-2xl font-bold hover:text-red-400">&times;</button>
+                    </div>
+                    <div class="p-6">
+                        <h4 class="font-semibold mb-2">Abstract</h4>
+                        <p class="text-sm text-gray-300 mb-4" x-text="selectedStudy.abstract"></p>
+                        <h4 class="font-semibold mb-2">PICO-TT Scoring</h4>
+                        <div class="mb-4">
+                            <template x-for="score in selectedStudy.pico" :key="score.label">
+                                <div class="pico-score">
+                                    <span class="pico-label" x-text="score.label"></span>
+                                    <div class="pico-bar-container">
+                                        <div class="pico-bar" :style="`width: ${score.value}%; background-color: ${picoColor(score.value)}`" x-text="`${score.value}%`"></div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <h4 class="font-semibold mb-2">AI Analysis (JSON Schema Output)</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div class="bg-gray-800 p-3 rounded">
+                                <p class="font-bold mb-1">Model 1 (Conservative)</p>
+                                <p><span class="font-semibold">Decision:</span> <span :class="selectedStudy.model1.decision === 'Include' ? 'text-green-400' : 'text-red-400'" x-text="selectedStudy.model1.decision"></span></p>
+                                <p><span class="font-semibold">Confidence:</span> <span x-text="`${selectedStudy.model1.confidence}%`"></span></p>
+                                <p class="mt-2"><span class="font-semibold">Reasoning:</span> <span class="text-gray-400" x-text="selectedStudy.model1.reasoning"></span></p>
+                            </div>
+                            <div class="bg-gray-800 p-3 rounded">
+                                <p class="font-bold mb-1">Model 2 (Pragmatic)</p>
+                                <p><span class="font-semibold">Decision:</span> <span :class="selectedStudy.model2.decision === 'Include' ? 'text-green-400' : 'text-red-400'" x-text="selectedStudy.model2.decision"></span></p>
+                                <p><span class="font-semibold">Confidence:</span> <span x-text="`${selectedStudy.model2.confidence}%`"></span></p>
+                                <p class="mt-2"><span class="font-semibold">Reasoning:</span> <span class="text-gray-400" x-text="selectedStudy.model2.reasoning"></span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+<script>
+function llmScreeningTool() {
+    return {
+        activeTab: 'dashboard',
+        model1: { status: { text: 'Disconnected', color: 'red' } },
+        model2: { status: { text: 'Disconnected', color: 'red' } },
+        logs: [],
+        logId: 0,
+        selectedStudy: null,
+        studies: [
+            { 
+                id: 1, 
+                title: 'Efficacy and safety of metformin in type 2 diabetes', 
+                authors: 'Johnson A, et al.', 
+                year: 2021,
+                abstract: 'This randomized controlled trial investigates the long-term efficacy and safety of metformin compared to placebo in 500 adults with newly diagnosed type 2 diabetes over a 24-month period. Primary outcomes were changes in HbA1c levels.',
+                status: { text: 'Included', class: 'status-green' },
+                agreement: 'Agreement',
+                pico: [
+                    { label: 'Population', value: 95 },
+                    { label: 'Intervention', value: 98 },
+                    { label: 'Comparison', value: 90 },
+                    { label: 'Outcomes', value: 85 },
+                    { label: 'Time Frame', value: 100 },
+                    { label: 'Study Types', value: 100 },
+                ],
+                model1: { decision: 'Include', confidence: 98, reasoning: 'All PICO criteria are met. RCT design is appropriate.'},
+                model2: { decision: 'Include', confidence: 95, reasoning: 'Strong match with population, intervention, and outcomes.'}
+            },
+            { 
+                id: 2, 
+                title: 'A qualitative study on patient experiences with insulin pumps', 
+                authors: 'Smith B, et al.', 
+                year: 2020,
+                abstract: 'This study explores the lived experiences of 20 patients using insulin pump therapy for type 1 diabetes. Data was collected through semi-structured interviews and analyzed using thematic analysis. The focus was on quality of life.',
+                status: { text: 'Excluded', class: 'status-red' },
+                agreement: 'Agreement',
+                 pico: [
+                    { label: 'Population', value: 40 },
+                    { label: 'Intervention', value: 30 },
+                    { label: 'Comparison', value: 0 },
+                    { label: 'Outcomes', value: 20 },
+                    { label: 'Time Frame', value: 10 },
+                    { label: 'Study Types', value: 0 },
+                ],
+                model1: { decision: 'Exclude', confidence: 100, reasoning: 'Wrong study type (qualitative) and population (Type 1).'},
+                model2: { decision: 'Exclude', confidence: 100, reasoning: 'Does not match study type criteria (not an RCT).'}
+            },
+            { 
+                id: 3, 
+                title: 'Short-term effects of a novel GLP-1 agonist in adults', 
+                authors: 'Chen C, et al.', 
+                year: 2022,
+                abstract: 'This pilot study examines the effects of a new GLP-1 agonist on glycemic control in adults over a 3-month period. While promising, the population includes both pre-diabetic and type 2 diabetic individuals.',
+                status: { text: 'Conflict', class: 'status-yellow' },
+                agreement: 'Conflict',
+                 pico: [
+                    { label: 'Population', value: 70 },
+                    { label: 'Intervention', value: 80 },
+                    { label: 'Comparison', value: 50 },
+                    { label: 'Outcomes', value: 75 },
+                    { label: 'Time Frame', value: 40 },
+                    { label: 'Study Types', value: 60 },
+                ],
+                model1: { decision: 'Exclude', confidence: 85, reasoning: 'Time frame (3 months) is too short. Population is mixed.'},
+                model2: { decision: 'Include', confidence: 75, reasoning: 'Potentially relevant intervention and outcomes. Flag for full-text review despite short time frame.'}
+            },
+        ],
+
+        init() {
+            this.addLog('System initialized. Ready for screening.', 'text-green-400');
+            setInterval(() => {
+                const now = new Date();
+                if (now.getSeconds() % 15 === 0) {
+                     this.addLog('Auto-saving configuration...', 'text-gray-400');
+                }
+            }, 1000);
+        },
+
+        addLog(message, colorClass = 'text-white') {
+            const timestamp = new Date().toISOString().substr(11, 8);
+            this.logs.unshift({ id: this.logId++, time: timestamp, message: message, color: colorClass });
+            if (this.logs.length > 200) {
+                this.logs.pop();
+            }
+        },
+
+        testConnection(model) {
+            const target = this[model];
+            const originalStatus = { ...target.status };
+
+            target.status = { text: 'Testing...', color: 'yellow' };
+            this.addLog(`Testing connection for ${model}...`, 'text-yellow-400');
+
+            setTimeout(() => {
+                if (Math.random() > 0.2) {
+                    target.status = { text: 'Connected', color: 'green' };
+                    this.addLog(`Connection successful for ${model}.`, 'text-green-400');
+                } else {
+                    target.status = { text: 'Connection Failed', color: 'red' };
+                    this.addLog(`Connection failed for ${model}. Check API key and endpoint.`, 'text-red-400');
+                }
+            }, 1500);
+        },
+        
+        picoColor(value) {
+            if (value > 80) return '#48bb78'; // green
+            if (value > 50) return '#ecc94b'; // yellow
+            return '#f56565'; // red
+        }
+    }
+}
+</script>
+
+</body>
+</html>

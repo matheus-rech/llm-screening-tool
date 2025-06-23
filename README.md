@@ -1,125 +1,82 @@
-# 🚀 Screening Center MVP
+# LLM Screening Tool
 
-**Production-Ready Automated Systematic Review Screening System**
+A Python-based dual-LLM screening tool for systematic reviews that automates the screening of academic papers using OpenAI and Anthropic models.
 
-A professional-grade, AI-powered tool for systematic review screening with dual-LLM intelligence. Complete web interface with real-time processing and advanced PICO-TT criteria support.
+## Features
 
-## 🎯 Quick Start for Demo
+- **Dual-LLM Architecture**: Uses both OpenAI (gpt-4o) and Anthropic (claude-3.5-sonnet) for comprehensive screening
+- **PICO-TT Extraction**: Automated extraction of Population, Intervention, Comparison, Outcomes, Time Frame, and Study Types
+- **Multiple File Formats**: Supports RIS, BibTeX, CSV, TSV, XML, Medline TXT, and PMID lists
+- **Real-time Interface**: Modern web interface with live progress tracking
+- **Cost Monitoring**: Built-in API cost tracking and optimization
+- **Human Review Triggers**: Mathematical formulas to determine when human review is needed
 
-```bash
-# 1. Set your API keys
-export OPENAI_API_KEY="sk-your-openai-key"
-export ENTREZ_EMAIL="your-email@domain.com"
+## Quick Start
 
-# 2. Launch MVP
-./START_MVP.sh
-
-# 3. Access system
-open http://localhost:8080
-```
-
-## ✨ Core Features
-
-✅ **Dual-LLM Screening Engine**
-- OpenAI GPT-4o (conservative approach)
-- Anthropic Claude-3.5 (liberal approach)
-- Structured Pydantic responses for reliability
-
-✅ **Multi-Format File Support**
-- RIS files (Reference Manager format)
-- BibTeX files
-- CSV/TSV with title/abstract columns
-- XML (PubMed/NLM format)
-- Medline TXT format
-- PMID lists (auto-fetch from PubMed)
-
-✅ **Advanced PICO-TT Configuration**
-- Population, Intervention, Comparison, Outcomes
-- Time Frame, Study Types
-- Custom inclusion/exclusion criteria
-- Template save/load functionality
-
-✅ **Real-Time Processing**
-- Streaming results with progress tracking
-- Concurrent processing with rate limiting
-- Cost tracking and error handling
-- Retry logic for API failures
-
-✅ **Project Management**
-- Multiple systematic review projects
-- Configuration templates
-- History and progress tracking
-- Collaborative reviewer support
-
-✅ **Export Capabilities**
-- CSV format with detailed reasoning
-- RIS format for reference managers
-- BibTeX format for LaTeX/academic use
-- Comprehensive reporting
-
-## 🏗️ Architecture
-
-```
-app/
-├── routes/              # Flask API endpoints
-│   ├── main.py         # Core project management
-│   └── screening.py    # Screening APIs
-├── services/
-│   ├── screening/      # Dual-LLM screening engine
-│   │   ├── dual_llm_screener.py
-│   │   ├── modern_llm.py
-│   │   └── workflow.py
-│   └── utils/          # File parsers, utilities
-│       ├── file_parser.py
-│       ├── concurrent_processor.py
-│       └── cost_tracker.py
-├── models/             # SQLAlchemy database models
-│   └── screening_models.py
-└── templates/          # HTML web interface
-    └── screening/
-```
-
-## 🔧 Technology Stack
-
-- **Flask** - Web framework with application factory
-- **SQLAlchemy** - Database ORM with migrations
-- **OpenAI API** - GPT-4o for systematic screening
-- **Anthropic API** - Claude-3.5 for comprehensive coverage
-- **Pydantic** - Structured response validation
-- **rispy** - RIS file parsing
-- **bibtexparser** - BibTeX file parsing
-- **biopython** - PubMed integration
-- **pytest** - Comprehensive testing suite
-
-## 🚀 Development
+### Prerequisites
 
 ```bash
-# Install dependencies
 pip install -r requirements.txt
+```
 
-# Initialize database
-python manage.py init-db
-python manage.py upgrade-db
+### Environment Variables
 
-# Run tests
-pytest
+```bash
+export OPENAI_API_KEY=your-openai-api-key
+export ANTHROPIC_API_KEY=your-anthropic-api-key
+export ENTREZ_EMAIL=your-email@domain.com  # For PMID fetching
+```
 
-# Development server
+### Running the Application
+
+```bash
 python run.py
 ```
 
-## 📊 Advanced Features
+Access the application at: http://localhost:5000
 
-- **Active Learning** - ML-powered article prioritization
-- **Collaborative Screening** - Multi-reviewer workflows
-- **Analytics Dashboard** - Screening statistics and insights
-- **Workflow Orchestration** - Batch, loop, chain, adaptive modes
-- **Error Recovery** - Comprehensive error handling with retries
+## Architecture
 
-## 🎯 MVP Status: **PRODUCTION READY**
+### Core Components
 
-**Ready for tomorrow's demo with full screening pipeline functional!**
+- **`app/`** - Main application package
+  - **`models/`** - Database models (Projects, Articles)
+  - **`routes/`** - Flask routes (main, screening)
+  - **`services/`** - Business logic
+    - **`screening/`** - Dual-LLM screening logic
+    - **`utils/`** - Utilities (file parsing, cost tracking, error handling)
+  - **`templates/`** - HTML templates
+  - **`static/`** - CSS/JS assets
 
----
+### Database
 
-*Built with modern Flask architecture and enterprise-grade reliability features.*
+- SQLite database with SQLAlchemy ORM
+- Automatic table creation on first run
+- Project-based organization
+
+### File Format Support
+
+- **RIS files** (Reference Manager format)
+- **BibTeX files**
+- **CSV/TSV files** with title/abstract columns
+- **XML files** (PubMed/NLM format)
+- **Medline TXT format**
+- **PMID lists** (fetches from PubMed via Biopython)
+
+## Usage
+
+1. **Create Project**: Set up PICO criteria and inclusion/exclusion rules
+2. **Upload References**: Support for multiple academic file formats
+3. **AI Screening**: Dual-LLM analysis with agreement tracking
+4. **Human Review**: Review conflicts and uncertain cases
+5. **Export Results**: CSV, RIS, or BibTeX output formats
+
+## Testing
+
+```bash
+pytest
+```
+
+## License
+
+MIT License

@@ -1,107 +1,63 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with this LLM screening tool repository.
 
 ## Project Overview
 
-This is a Python-based LLM screening tool for systematic reviews that automates the screening of academic papers using dual large language models. The tool leverages OpenAI's GPT models to evaluate studies against PICO-TT criteria (Population, Intervention, Comparison, Outcomes, Time Frame, Study Types) for systematic review inclusion/exclusion decisions.
+This is a Python-based dual-LLM screening tool for systematic reviews that automates academic paper screening using OpenAI and Anthropic models.
 
 ## Core Architecture
 
 ### Main Components
 
-- **`app.py`** - Flask web application providing the main user interface
-  - Routes for file upload, streaming screening results, conflict resolution
-  - SQLAlchemy models: `Project` (screening projects) and `Article` (individual papers)
-  - Export functionality (CSV, RIS, BibTeX formats)
-  - Template management for PICO configurations
+- **`app/`** - Flask application package
+  - **`models/screening_models.py`** - SQLAlchemy models (Project, Article)
+  - **`routes/main.py`** - Main routes (dashboard, project management)
+  - **`routes/screening.py`** - Screening-specific routes
+  - **`services/screening/`** - Dual-LLM screening logic
+  - **`services/utils/`** - Utilities (file parsing, cost tracking)
+  - **`templates/`** - HTML templates (modern dashboard, screening interface)
 
-- **`rag.py`** - Core screening pipeline and CLI interface  
-  - Dual-LLM screening logic using conservative (gpt-4o-mini) and liberal (gpt-3.5-turbo) models
-  - File format parsers: RIS, BibTeX, CSV, TSV, XML, Medline TXT, PMID lists
-  - Batch processing with threading support
-  - Database integration for project-based screening
+- **`run.py`** - Application entry point using factory pattern
 
-- **`real-dual-llm-evaluator.py`** - Legacy evaluation script (minimal content)
+### Key Features
 
-### Database Schema
-
-- **Projects**: Store screening configurations and metadata
-- **Articles**: Individual papers with screening status (pending, included, excluded, conflict)
-- Uses SQLite with SQLAlchemy ORM
-
-### File Format Support
-
-The tool supports multiple academic reference formats:
-- RIS files (Reference Manager format)
-- BibTeX files
-- CSV/TSV files with title/abstract columns
-- XML files (PubMed/NLM format)
-- Medline TXT format
-- PMID lists (fetches from PubMed via Biopython)
+- **Dual-LLM Architecture**: OpenAI gpt-4o + Anthropic claude-3.5-sonnet
+- **Pydantic Structured Outputs**: Reliable data extraction
+- **Agreement Analysis**: Mathematical triggers for human review
+- **Cost Tracking**: API usage monitoring
+- **Multiple File Formats**: RIS, BibTeX, CSV, XML, PMID support
 
 ## Development Commands
 
-### Environment Setup
-```bash
-pip install -r requirements.txt
-export OPENAI_API_KEY=sk-...
-export ENTREZ_EMAIL=your-email@domain.com  # Required for PMID fetching
-```
-
 ### Running the Application
 
-**Web Interface:**
 ```bash
-python app.py
+python run.py
 ```
-- Runs Flask development server on debug mode
-- Access at http://localhost:5000
 
-**CLI Mode:**
+### Database Initialization
+
 ```bash
-python rag.py <input_file> <output_file> [batch_size] [--verbose]
+python -c "from app import create_app, db; app = create_app(); app.app_context().db.create_all()"
 ```
-Example: `python rag.py citations.ris results.csv 10 --verbose`
 
-### Database Operations
+### Testing
 
-The application uses SQLite database (`screening_projects.db`) that gets created automatically. No manual database setup required.
+```bash
+pytest
+```
 
-## Key Dependencies
+## Environment Variables
 
-- **Flask** - Web framework
-- **SQLAlchemy** - Database ORM  
-- **OpenAI** - LLM API integration
-- **rispy** - RIS file parsing
-- **bibtexparser** - BibTeX file parsing
-- **lxml** - XML file parsing
-- **biopython** - PubMed data fetching
+- **OPENAI_API_KEY**: OpenAI API key for gpt-4o
+- **ANTHROPIC_API_KEY**: Anthropic API key for claude-3.5-sonnet  
+- **ENTREZ_EMAIL**: Email for PubMed API access (PMID fetching)
 
-## Configuration Templates
+## Important Notes
 
-The system supports saving and loading PICO configuration templates in `config_templates/` directory as JSON files.
-
-## Testing & Quality
-
-**Current Status**: No formal testing framework is implemented.
-
-**To run linting/formatting** (not currently configured):
-- Consider adding pytest for testing
-- Consider adding black/flake8 for code formatting
-- No CI/CD pipeline currently exists
-
-## Important File Locations
-
-- **Templates**: `templates/` (HTML templates for web interface)
-- **Uploads**: `uploads/` (uploaded reference files)
-- **Results**: `results/` (screening output files)  
-- **Test Data**: `test_data/` (sample input files for testing)
-- **Config Templates**: `config_templates/` (saved PICO configurations)
-
-## Development Notes
-
-- The dual-LLM approach uses two models with different "personalities" (conservative vs liberal) to identify disagreements requiring human review
-- Supports batch processing with configurable batch sizes for large datasets
-- All LLM interactions require JSON-formatted responses for structured decision-making
-- The system handles disagreements by generating detailed conflict reports using GPT-4
+- Uses SQLite database (`instance/screening_projects.db`)
+- Modern web interface with AlpineJS and TailwindCSS
+- Supports both BATCH and LOOP processing strategies
+- Built-in error handling and retry logic
+- Comprehensive test coverage in `tests/` directory
