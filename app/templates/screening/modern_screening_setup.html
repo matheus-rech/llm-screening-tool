@@ -287,34 +287,95 @@
                     <p class="text-gray-600">Configure AI providers and screening workflow</p>
                 </div>
 
-                <!-- Provider Selection -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div class="border border-gray-200 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Primary Provider</h3>
-                        <select x-model="formData.llmConfig.primaryProvider" 
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-4">
-                            <option value="openai">OpenAI (o3/GPT-4o)</option>
-                            <option value="anthropic">Anthropic (Claude-3.5-Sonnet)</option>
+                <!-- Multi-Provider Configuration -->
+                <div class="bg-gray-50 rounded-lg p-6 mb-8">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                        <i class="bi bi-layers mr-2"></i>Provider Configuration
+                    </h3>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Consensus Strategy</label>
+                        <select x-model="formData.llmConfig.consensusStrategy" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="weighted_voting">Weighted Voting (Recommended)</option>
+                            <option value="majority">Majority Decision</option>
+                            <option value="unanimous">Unanimous Agreement</option>
                         </select>
-                        <div class="text-sm text-gray-600">
-                            <p><strong>Cost:</strong> ~$0.005 per article</p>
-                            <p><strong>Speed:</strong> Fast</p>
-                            <p><strong>Accuracy:</strong> High</p>
-                        </div>
                     </div>
-
-                    <div class="border border-gray-200 rounded-lg p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Secondary Provider</h3>
-                        <select x-model="formData.llmConfig.secondaryProvider" 
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-4">
-                            <option value="anthropic">Anthropic (Claude-3.5-Sonnet)</option>
-                            <option value="openai">OpenAI (o3/GPT-4o)</option>
-                        </select>
-                        <div class="text-sm text-gray-600">
-                            <p><strong>Cost:</strong> ~$0.003 per article</p>
-                            <p><strong>Speed:</strong> Fast</p>
-                            <p><strong>Accuracy:</strong> High</p>
-                        </div>
+                    
+                    <div class="space-y-4">
+                        <template x-for="(provider, index) in formData.llmConfig.providers" :key="index">
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-medium text-gray-900" x-text="'Provider ' + (index + 1)"></h4>
+                                    <button @click="removeProvider(index)" 
+                                            x-show="formData.llmConfig.providers.length > 2"
+                                            class="text-red-500 hover:text-red-700">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Provider</label>
+                                        <select x-model="provider.provider" 
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                            <option value="openai">OpenAI</option>
+                                            <option value="anthropic">Anthropic</option>
+                                            <option value="google">Google Gemini</option>
+                                            <option value="ollama">Ollama (Local)</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                                        <select x-model="provider.model_name" 
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                            <template x-if="provider.provider === 'openai'">
+                                                <div>
+                                                    <option value="o3">o3 (Latest)</option>
+                                                    <option value="o3-mini">o3-mini (Latest)</option>
+                                                    <option value="gpt-4o">GPT-4o</option>
+                                                    <option value="gpt-4o-mini">GPT-4o Mini</option>
+                                                    <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                                </div>
+                                            </template>
+                                            <template x-if="provider.provider === 'anthropic'">
+                                                <div>
+                                                    <option value="claude-3-5-sonnet-20241022">Claude-3.5-Sonnet</option>
+                                                    <option value="claude-3-haiku">Claude-3-Haiku</option>
+                                                </div>
+                                            </template>
+                                            <template x-if="provider.provider === 'google'">
+                                                <div>
+                                                    <option value="gemini-pro">Gemini Pro</option>
+                                                    <option value="gemini-pro-vision">Gemini Pro Vision</option>
+                                                </div>
+                                            </template>
+                                            <template x-if="provider.provider === 'ollama'">
+                                                <div>
+                                                    <option value="llama2-7b">Llama2 7B</option>
+                                                    <option value="llama2-13b">Llama2 13B</option>
+                                                </div>
+                                            </template>
+                                        </select>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Temperature</label>
+                                        <input type="number" x-model="provider.temperature" 
+                                               min="0" max="2" step="0.1"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        
+                        <button @click="addProvider()" 
+                                x-show="formData.llmConfig.providers.length < 5"
+                                class="w-full border-2 border-dashed border-blue-300 rounded-lg p-4 text-blue-600 hover:bg-blue-50 transition-colors">
+                            <i class="bi bi-plus mr-2"></i>Add Provider
+                        </button>
                     </div>
                 </div>
 
@@ -456,16 +517,42 @@
                     inclusionCriteria: ['Studies must be randomized controlled trials'],
                     exclusionCriteria: ['Exclude animal studies'],
                     llmConfig: {
-                        primaryProvider: 'openai',
-                        secondaryProvider: 'anthropic',
+                        consensusStrategy: 'weighted_voting',
+                        providers: [
+                            {
+                                provider: 'openai',
+                                model_name: 'gpt-4o',
+                                temperature: 0.1,
+                                seed: null
+                            },
+                            {
+                                provider: 'anthropic',
+                                model_name: 'claude-3-5-sonnet-20241022',
+                                temperature: 0.1,
+                                seed: null
+                            }
+                        ],
                         workflowType: 'adaptive',
                         batchSize: 10,
                         maxBudget: null,
-                        enableEarlyStopping: true,
-                        openaiTemperature: 0.1,
-                        anthropicTemperature: 0.1,
-                        openaiSeed: null,
-                        anthropicSeed: null
+                        enableEarlyStopping: true
+                    }
+                },
+                
+                addProvider() {
+                    if (this.formData.llmConfig.providers.length < 5) {
+                        this.formData.llmConfig.providers.push({
+                            provider: 'openai',
+                            model_name: 'gpt-4o',
+                            temperature: 0.1,
+                            seed: null
+                        });
+                    }
+                },
+                
+                removeProvider(index) {
+                    if (this.formData.llmConfig.providers.length > 2) {
+                        this.formData.llmConfig.providers.splice(index, 1);
                     }
                 },
                 

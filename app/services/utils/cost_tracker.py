@@ -83,6 +83,34 @@ MODEL_PRICING = {
         output_cost_per_1k_tokens=Decimal("0.015"),
         context_window=200000,
         notes="Anthropic's balanced option"
+    ),
+    "gemini-pro": ModelPricing(
+        model_name="gemini-pro",
+        input_cost_per_1k_tokens=Decimal("0.0005"),
+        output_cost_per_1k_tokens=Decimal("0.0015"),
+        context_window=32000,
+        notes="Google's Gemini Pro model"
+    ),
+    "gemini-pro-vision": ModelPricing(
+        model_name="gemini-pro-vision",
+        input_cost_per_1k_tokens=Decimal("0.00025"),
+        output_cost_per_1k_tokens=Decimal("0.0005"),
+        context_window=16000,
+        notes="Google's multimodal model"
+    ),
+    "llama2-7b": ModelPricing(
+        model_name="llama2-7b",
+        input_cost_per_1k_tokens=Decimal("0.0001"),
+        output_cost_per_1k_tokens=Decimal("0.0002"),
+        context_window=4000,
+        notes="Ollama local Llama2 7B (estimated cost)"
+    ),
+    "llama2-13b": ModelPricing(
+        model_name="llama2-13b",
+        input_cost_per_1k_tokens=Decimal("0.0002"),
+        output_cost_per_1k_tokens=Decimal("0.0004"),
+        context_window=4000,
+        notes="Ollama local Llama2 13B (estimated cost)"
     )
 }
 
