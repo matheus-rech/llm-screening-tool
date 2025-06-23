@@ -321,14 +321,44 @@
                         <h2 class="text-lg font-semibold">AI Model 1 (Conservative)</h2>
                     </div>
                     <div class="p-4 space-y-3">
-                        <select class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md">
-                            <option>Claude (Anthropic)</option>
-                            <option>OpenAI (GPT-4)</option>
-                            <option>Ollama (Local)</option>
-                            <option>LM Studio (Local)</option>
-                        </select>
-                        <input type="password" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="API Key">
-                        <input type="text" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="API Endpoint (if local)">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Provider</label>
+                            <select id="model1_provider" name="model1_provider" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" x-model="model1.provider" @change="updateModelOptions('model1')">
+                                <option value="anthropic">Claude (Anthropic)</option>
+                                <option value="openai">OpenAI (GPT-4)</option>
+                                <option value="ollama">Ollama (Local)</option>
+                                <option value="lm_studio">LM Studio (Local)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Model</label>
+                            <select id="model1_name" name="model1_name" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" x-model="model1.model_name">
+                                <template x-for="model in getAvailableModels(model1.provider)" :key="model.value">
+                                    <option :value="model.value" x-text="model.label"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">API Key</label>
+                            <input type="password" id="model1_api_key" name="model1_api_key" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="API Key" x-model="model1.api_key">
+                        </div>
+                        <div x-show="model1.provider === 'ollama' || model1.provider === 'lm_studio'">
+                            <label class="block text-sm font-medium text-gray-300 mb-1">API Endpoint</label>
+                            <input type="text" id="model1_endpoint" name="model1_endpoint" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="http://localhost:11434" x-model="model1.api_endpoint">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Temperature</label>
+                                <div class="flex items-center space-x-2">
+                                    <input type="range" id="model1_temperature" name="model1_temperature" min="0" max="2" step="0.1" class="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer" x-model="model1.temperature" @input="autoSaveConfiguration()">
+                                    <span class="text-sm text-gray-300 w-8" x-text="model1.temperature"></span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Seed (Optional)</label>
+                                <input type="number" id="model1_seed" name="model1_seed" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="42" x-model="model1.seed" @input="autoSaveConfiguration()">
+                            </div>
+                        </div>
                         <div class="flex items-center justify-between">
                             <span :class="`status-badge status-${model1.status.color}`" x-text="model1.status.text"></span>
                             <button @click="testConnection('model1')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-md text-sm font-semibold shadow">Test Connection</button>
@@ -342,14 +372,44 @@
                          <h2 class="text-lg font-semibold">AI Model 2 (Pragmatic)</h2>
                     </div>
                     <div class="p-4 space-y-3">
-                        <select class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md">
-                            <option>OpenAI (GPT-3.5 Turbo)</option>
-                            <option>Claude (Anthropic)</option>
-                            <option>Ollama (Local)</option>
-                            <option>LM Studio (Local)</option>
-                        </select>
-                        <input type="password" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="API Key">
-                        <input type="text" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="API Endpoint (if local)">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Provider</label>
+                            <select id="model2_provider" name="model2_provider" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" x-model="model2.provider" @change="updateModelOptions('model2')">
+                                <option value="openai">OpenAI (GPT-4)</option>
+                                <option value="anthropic">Claude (Anthropic)</option>
+                                <option value="ollama">Ollama (Local)</option>
+                                <option value="lm_studio">LM Studio (Local)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">Model</label>
+                            <select id="model2_name" name="model2_name" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" x-model="model2.model_name">
+                                <template x-for="model in getAvailableModels(model2.provider)" :key="model.value">
+                                    <option :value="model.value" x-text="model.label"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">API Key</label>
+                            <input type="password" id="model2_api_key" name="model2_api_key" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="API Key" x-model="model2.api_key">
+                        </div>
+                        <div x-show="model2.provider === 'ollama' || model2.provider === 'lm_studio'">
+                            <label class="block text-sm font-medium text-gray-300 mb-1">API Endpoint</label>
+                            <input type="text" id="model2_endpoint" name="model2_endpoint" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md" placeholder="http://localhost:11434" x-model="model2.api_endpoint">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Temperature</label>
+                                <div class="flex items-center space-x-2">
+                                    <input type="range" id="model2_temperature" name="model2_temperature" min="0" max="2" step="0.1" class="flex-1 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer" x-model="model2.temperature" @input="autoSaveConfiguration()">
+                                    <span class="text-sm text-gray-300 w-8" x-text="model2.temperature"></span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Seed (Optional)</label>
+                                <input type="number" id="model2_seed" name="model2_seed" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm" placeholder="42" x-model="model2.seed" @input="autoSaveConfiguration()">
+                            </div>
+                        </div>
                          <div class="flex items-center justify-between">
                             <span :class="`status-badge status-${model2.status.color}`" x-text="model2.status.text"></span>
                             <button @click="testConnection('model2')" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded-md text-sm font-semibold shadow">Test Connection</button>
@@ -548,6 +608,11 @@
                                     <button @click="activeTab = 'screening'" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-4 rounded-lg text-sm font-medium">
                                         Open Project
                                     </button>
+                                    <a href="{{ url_for('main.export_dual_llm_comparison', project_id=project.id) }}" 
+                                       class="bg-green-600 hover:bg-green-700 text-white p-2 rounded-lg text-sm font-medium flex items-center justify-center"
+                                       title="Export Dual-LLM Comparison">
+                                        📊
+                                    </a>
                                     <button class="bg-gray-600 hover:bg-gray-500 text-white p-2 rounded-lg text-sm">
                                         ⚙️
                                     </button>
@@ -619,8 +684,24 @@
 function llmScreeningTool() {
     return {
         activeTab: 'dashboard',
-        model1: { status: { text: 'Disconnected', color: 'red' } },
-        model2: { status: { text: 'Disconnected', color: 'red' } },
+        model1: { 
+            provider: 'anthropic',
+            model_name: 'claude-3-5-sonnet-20241022',
+            api_key: '',
+            api_endpoint: '',
+            temperature: 0.1,
+            seed: null,
+            status: { text: 'Disconnected', color: 'red' }
+        },
+        model2: { 
+            provider: 'openai',
+            model_name: 'gpt-4o',
+            api_key: '',
+            api_endpoint: '',
+            temperature: 0.1,
+            seed: null,
+            status: { text: 'Disconnected', color: 'red' }
+        },
         logs: [],
         logId: 0,
         selectedStudy: null,
@@ -709,21 +790,139 @@ function llmScreeningTool() {
             target.status = { text: 'Testing...', color: 'yellow' };
             this.addLog(`Testing connection for ${model}...`, 'text-yellow-400');
 
-            setTimeout(() => {
-                if (Math.random() > 0.2) {
-                    target.status = { text: 'Connected', color: 'green' };
-                    this.addLog(`Connection successful for ${model}.`, 'text-green-400');
+            // Call the backend API to test connection
+            fetch('/api/config/test-connection', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model_key: model,
+                    config: {
+                        provider: target.provider,
+                        model_name: target.model_name,
+                        temperature: target.temperature,
+                        seed: target.seed,
+                        api_key: target.api_key,
+                        api_endpoint: target.api_endpoint
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    target.status = { text: data.status, color: 'green' };
+                    this.addLog(data.message, 'text-green-400');
                 } else {
-                    target.status = { text: 'Connection Failed', color: 'red' };
-                    this.addLog(`Connection failed for ${model}. Check API key and endpoint.`, 'text-red-400');
+                    target.status = { text: data.status, color: 'red' };
+                    this.addLog(data.message, 'text-red-400');
                 }
-            }, 1500);
+            })
+            .catch(error => {
+                target.status = { text: 'Connection Failed', color: 'red' };
+                this.addLog(`Connection test failed: ${error.message}`, 'text-red-400');
+            });
         },
         
         picoColor(value) {
             if (value > 80) return '#48bb78'; // green
             if (value > 50) return '#ecc94b'; // yellow
             return '#f56565'; // red
+        },
+
+        getAvailableModels(provider) {
+            const modelOptions = {
+                'openai': [
+                    { value: 'gpt-4o', label: 'GPT-4o' },
+                    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+                    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+                    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' }
+                ],
+                'anthropic': [
+                    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+                    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
+                    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' }
+                ],
+                'ollama': [
+                    { value: 'llama3.1:8b', label: 'Llama 3.1 8B' },
+                    { value: 'llama3.1:70b', label: 'Llama 3.1 70B' },
+                    { value: 'mistral:7b', label: 'Mistral 7B' },
+                    { value: 'codellama:7b', label: 'Code Llama 7B' }
+                ],
+                'lm_studio': [
+                    { value: 'local-model', label: 'Local Model' },
+                    { value: 'custom-model', label: 'Custom Model' }
+                ]
+            };
+            return modelOptions[provider] || [];
+        },
+
+        updateModelOptions(modelKey) {
+            const model = this[modelKey];
+            const availableModels = this.getAvailableModels(model.provider);
+            if (availableModels.length > 0) {
+                model.model_name = availableModels[0].value;
+            }
+            
+            // Update API endpoint placeholder based on provider
+            if (model.provider === 'ollama') {
+                model.api_endpoint = 'http://localhost:11434';
+            } else if (model.provider === 'lm_studio') {
+                model.api_endpoint = 'http://localhost:1234';
+            } else {
+                model.api_endpoint = '';
+            }
+            
+            this.addLog(`Updated ${modelKey} provider to ${model.provider}`, 'text-blue-400');
+        },
+
+        saveConfiguration() {
+            this.addLog('Saving configuration...', 'text-blue-400');
+            
+            // Prepare configuration data
+            const configData = {
+                model1: {
+                    provider: this.model1.provider,
+                    model_name: this.model1.model_name,
+                    temperature: this.model1.temperature,
+                    seed: this.model1.seed,
+                    api_key: this.model1.api_key,
+                    api_endpoint: this.model1.api_endpoint
+                },
+                model2: {
+                    provider: this.model2.provider,
+                    model_name: this.model2.model_name,
+                    temperature: this.model2.temperature,
+                    seed: this.model2.seed,
+                    api_key: this.model2.api_key,
+                    api_endpoint: this.model2.api_endpoint
+                }
+            };
+
+            // Send configuration to backend
+            fetch('/api/config/models', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(configData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.addLog('Configuration saved successfully!', 'text-green-400');
+                } else {
+                    this.addLog(`Configuration save failed: ${data.error}`, 'text-red-400');
+                }
+            })
+            .catch(error => {
+                this.addLog(`Configuration save failed: ${error.message}`, 'text-red-400');
+            });
+        },
+
+        autoSaveConfiguration() {
+            // Auto-save configuration when values change
+            this.saveConfiguration();
         }
     }
 }
