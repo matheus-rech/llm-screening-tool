@@ -134,6 +134,32 @@ def upload_file(project_id):
             logger.error(f"Error parsing file: {str(e)}")
             return jsonify({'error': f'Error parsing file: {str(e)}'}), 500
 
+@main_bp.route('/project/<int:project_id>/export/dual-llm-comparison')
+def export_dual_llm_comparison(project_id):
+    """Export dual-LLM comparison spreadsheet."""
+    project = Project.query.get_or_404(project_id)
+    articles = Article.query.filter_by(project_id=project_id).all()
+    
+    articles_with_results = [a for a in articles if a.decision_reasoning]
+    
+    if not articles_with_results:
+        return jsonify({'error': 'No dual-LLM screening results found'}), 400
+    
+    from app.services.utils.dual_llm_comparison_exporter import DualLLMComparisonExporter
+    exporter = DualLLMComparisonExporter()
+    
+    try:
+        filepath = exporter.generate_comparison_spreadsheet(articles_with_results, project.name)
+        return send_file(
+            filepath,
+            as_attachment=True,
+            download_name=f'{project.name}_dual_llm_comparison.xlsx',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+    except Exception as e:
+        logger.error(f"Error generating comparison spreadsheet: {str(e)}")
+        return jsonify({'error': f'Export failed: {str(e)}'}), 500
+
 @main_bp.route('/project/<int:project_id>/export/<format>')
 def export_results(project_id, format):
     """Export screening results in various formats."""
