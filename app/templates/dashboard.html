@@ -608,6 +608,11 @@
                                     <button @click="activeTab = 'screening'" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-4 rounded-lg text-sm font-medium">
                                         Open Project
                                     </button>
+                                    <a href="{{ url_for('main.export_dual_llm_comparison', project_id=project.id) }}" 
+                                       class="bg-green-600 hover:bg-green-700 text-white p-2 rounded-lg text-sm font-medium flex items-center justify-center"
+                                       title="Export Dual-LLM Comparison">
+                                        📊
+                                    </a>
                                     <button class="bg-gray-600 hover:bg-gray-500 text-white p-2 rounded-lg text-sm">
                                         ⚙️
                                     </button>

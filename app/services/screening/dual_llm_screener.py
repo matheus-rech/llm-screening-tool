@@ -24,6 +24,30 @@ from app.services.utils.exceptions import APIError, ValidationError
 logger = logging.getLogger(__name__)
 
 # ============================================================================
+# ============================================================================
+
+@dataclass
+class ModelConfig:
+    """Configuration for LLM providers."""
+    provider: str  # 'openai' or 'anthropic'
+    model_name: str
+    temperature: float = 0.1
+    seed: Optional[int] = None
+    max_tokens: Optional[int] = None
+    
+    def __post_init__(self):
+        if self.temperature < 0 or self.temperature > 2:
+            raise ValueError("Temperature must be between 0 and 2")
+        if self.seed is not None and (self.seed < 0 or self.seed > 2**32):
+            raise ValueError("Seed must be between 0 and 2^32")
+
+@dataclass 
+class DualModelConfig:
+    """Configuration for both LLM providers."""
+    openai_config: ModelConfig
+    anthropic_config: ModelConfig
+
+# ============================================================================
 # PYDANTIC MODELS FOR STRUCTURED OUTPUTS
 # ============================================================================
 
@@ -103,26 +127,6 @@ class ComprehensiveScreeningResult(BaseModel):
 # ============================================================================
 
 @dataclass
-class ModelConfig:
-    """Configuration for LLM model parameters."""
-    provider: str  # openai, anthropic, ollama, lm_studio
-    model_name: str
-    temperature: float = 0.1
-    seed: Optional[int] = None
-    max_tokens: int = 4000
-    api_key: str = ""
-    api_endpoint: Optional[str] = None  # for local models
-    
-    def __post_init__(self):
-        """Validate configuration parameters."""
-        if not 0.0 <= self.temperature <= 2.0:
-            raise ValueError("Temperature must be between 0.0 and 2.0")
-        if self.seed is not None and not isinstance(self.seed, int):
-            raise ValueError("Seed must be an integer or None")
-        if self.max_tokens <= 0:
-            raise ValueError("Max tokens must be positive")
-
-@dataclass
 class ScreeningCriteria:
     """Configuration for screening criteria."""
     research_question: str
@@ -153,13 +157,10 @@ class ScreeningCriteria:
 class OpenAIProvider:
     """OpenAI provider with configurable parameters."""
     
-    def __init__(self, config: ModelConfig):
-        if not config.api_key:
-            raise ValueError("OpenAI API key is required")
-        
-        self.config = config
-        self.client = OpenAI(api_key=config.api_key)
-        self.model_name = config.model_name or "gpt-4o"
+    def __init__(self, api_key: str, config: Optional[ModelConfig] = None):
+        self.client = OpenAI(api_key=api_key)
+        self.config = config or ModelConfig(provider='openai', model_name='gpt-4o')
+        self.model_name = self.config.model_name
         self.provider_name = "openai"
     
     @retry_with_backoff(max_retries=3)
@@ -174,7 +175,7 @@ class OpenAIProvider:
         
         try:
             request_params = {
-                "model": self.model_name,
+                "model": self.config.model_name,
                 "messages": [
                     {
                         "role": "system", 
@@ -186,9 +187,11 @@ class OpenAIProvider:
                     }
                 ],
                 "response_format": ComprehensiveScreeningResult,
-                "temperature": self.config.temperature,
-                "max_tokens": self.config.max_tokens
+                "temperature": self.config.temperature
             }
+            
+            if self.config.max_tokens is not None:
+                request_params["max_tokens"] = self.config.max_tokens
             
             if self.config.seed is not None:
                 request_params["seed"] = self.config.seed
@@ -208,7 +211,7 @@ class OpenAIProvider:
             
             # Add provider metadata
             result.llm_provider = self.provider_name
-            result.model_name = self.model_name
+            result.model_name = self.config.model_name
             
             return result
             
@@ -255,13 +258,10 @@ class OpenAIProvider:
 class AnthropicProvider:
     """Anthropic provider with configurable parameters."""
     
-    def __init__(self, config: ModelConfig):
-        if not config.api_key:
-            raise ValueError("Anthropic API key is required")
-        
-        self.config = config
-        self.client = Anthropic(api_key=config.api_key)
-        self.model_name = config.model_name or "claude-3-5-sonnet-20241022"
+    def __init__(self, api_key: str, config: Optional[ModelConfig] = None):
+        self.client = Anthropic(api_key=api_key)
+        self.config = config or ModelConfig(provider='anthropic', model_name='claude-3-5-sonnet-20241022')
+        self.model_name = self.config.model_name
         self.provider_name = "anthropic"
     
     @retry_with_backoff(max_retries=3)
@@ -276,8 +276,8 @@ class AnthropicProvider:
         
         try:
             request_params = {
-                "model": self.model_name,
-                "max_tokens": self.config.max_tokens,
+                "model": self.config.model_name,
+                "max_tokens": self.config.max_tokens or 4000,
                 "temperature": self.config.temperature,
                 "system": "You are an expert systematic review researcher. Analyze the provided abstract against the given criteria and provide a comprehensive structured assessment. Respond ONLY with valid JSON matching the required schema.",
                 "messages": [
@@ -287,7 +287,6 @@ class AnthropicProvider:
                     }
                 ]
             }
-            
             
             response = self.client.messages.create(**request_params)
             
@@ -307,7 +306,7 @@ class AnthropicProvider:
             
             # Add provider metadata
             result.llm_provider = self.provider_name
-            result.model_name = self.model_name
+            result.model_name = self.config.model_name
             
             return result
             
@@ -365,24 +364,15 @@ class AnthropicProvider:
 class DualProviderScreeningOrchestrator:
     """Orchestrates screening using both OpenAI and Anthropic providers."""
     
-    def __init__(self, openai_config: ModelConfig, anthropic_config: ModelConfig):
-        self.openai_provider = OpenAIProvider(openai_config)
-        self.anthropic_provider = AnthropicProvider(anthropic_config)
-        
-    @classmethod
-    def create_with_api_keys(cls, openai_api_key: str, anthropic_api_key: str):
-        """Backward compatibility method for simple API key initialization."""
-        openai_config = ModelConfig(
-            provider="openai",
-            model_name="gpt-4o",
-            api_key=openai_api_key
-        )
-        anthropic_config = ModelConfig(
-            provider="anthropic", 
-            model_name="claude-3-5-sonnet-20241022",
-            api_key=anthropic_api_key
-        )
-        return cls(openai_config, anthropic_config)
+    def __init__(self, openai_api_key: str, anthropic_api_key: str, config: Optional[DualModelConfig] = None):
+        if config:
+            self.openai_provider = OpenAIProvider(openai_api_key, config.openai_config)
+            self.anthropic_provider = AnthropicProvider(anthropic_api_key, config.anthropic_config)
+        else:
+            default_openai_config = ModelConfig(provider="openai", model_name="gpt-4o")
+            default_anthropic_config = ModelConfig(provider="anthropic", model_name="claude-3-5-sonnet-20241022")
+            self.openai_provider = OpenAIProvider(openai_api_key, default_openai_config)
+            self.anthropic_provider = AnthropicProvider(anthropic_api_key, default_anthropic_config)
         
     def screen_article_dual_provider(self, 
                                    article: Article, 
