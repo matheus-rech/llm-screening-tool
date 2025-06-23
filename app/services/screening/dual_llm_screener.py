@@ -155,11 +155,12 @@ class ScreeningCriteria:
 # ============================================================================
 
 class OpenAIProvider:
-    """OpenAI provider using latest GPT models."""
+    """OpenAI provider with configurable parameters."""
     
-    def __init__(self, api_key: str, config: ModelConfig):
+    def __init__(self, api_key: str, config: Optional[ModelConfig] = None):
         self.client = OpenAI(api_key=api_key)
-        self.config = config
+        self.config = config or ModelConfig(provider='openai', model_name='gpt-4o')
+        self.model_name = self.config.model_name
         self.provider_name = "openai"
     
     @retry_with_backoff(max_retries=3)
@@ -255,11 +256,12 @@ class OpenAIProvider:
         """
 
 class AnthropicProvider:
-    """Anthropic provider using latest Claude models."""
+    """Anthropic provider with configurable parameters."""
     
-    def __init__(self, api_key: str, config: ModelConfig):
+    def __init__(self, api_key: str, config: Optional[ModelConfig] = None):
         self.client = Anthropic(api_key=api_key)
-        self.config = config
+        self.config = config or ModelConfig(provider='anthropic', model_name='claude-3-5-sonnet-20241022')
+        self.model_name = self.config.model_name
         self.provider_name = "anthropic"
     
     @retry_with_backoff(max_retries=3)
@@ -362,9 +364,15 @@ class AnthropicProvider:
 class DualProviderScreeningOrchestrator:
     """Orchestrates screening using both OpenAI and Anthropic providers."""
     
-    def __init__(self, openai_api_key: str, anthropic_api_key: str, config: DualModelConfig):
-        self.openai_provider = OpenAIProvider(openai_api_key, config.openai_config)
-        self.anthropic_provider = AnthropicProvider(anthropic_api_key, config.anthropic_config)
+    def __init__(self, openai_api_key: str, anthropic_api_key: str, config: Optional[DualModelConfig] = None):
+        if config:
+            self.openai_provider = OpenAIProvider(openai_api_key, config.openai_config)
+            self.anthropic_provider = AnthropicProvider(anthropic_api_key, config.anthropic_config)
+        else:
+            default_openai_config = ModelConfig(provider="openai", model_name="gpt-4o")
+            default_anthropic_config = ModelConfig(provider="anthropic", model_name="claude-3-5-sonnet-20241022")
+            self.openai_provider = OpenAIProvider(openai_api_key, default_openai_config)
+            self.anthropic_provider = AnthropicProvider(anthropic_api_key, default_anthropic_config)
         
     def screen_article_dual_provider(self, 
                                    article: Article, 

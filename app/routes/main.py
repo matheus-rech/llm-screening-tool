@@ -18,6 +18,7 @@ from werkzeug.utils import secure_filename
 
 from app.models.screening_models import db, Project, Article
 from app.services.utils.file_parser import load_studies
+from app.services.screening.dual_llm_screener import ModelConfig, DualProviderScreeningOrchestrator
 
 logger = logging.getLogger(__name__)
 
