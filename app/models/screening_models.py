@@ -5,7 +5,11 @@ Contains SQLAlchemy models for projects, articles, and related entities.
 
 from datetime import datetime
 import json
+import logging
+from typing import List, Dict
 from flask_sqlalchemy import SQLAlchemy
+
+logger = logging.getLogger(__name__)
 
 # This db instance will be imported and used by app/__init__.py
 db = SQLAlchemy()
@@ -185,3 +189,133 @@ class ConflictResolution(db.Model):
     
     def __repr__(self):
         return f'<ConflictResolution A{self.article_id}>'
+
+class PublicationSource(db.Model):
+    """Track publication sources for articles."""
+    
+    id = db.Column(db.Integer, primary_key=True)
+    article_id = db.Column(db.Integer, db.ForeignKey('article.id'), nullable=False)
+    source_database = db.Column(db.String(50), nullable=False)  # PubMed, Scopus, etc.
+    source_id = db.Column(db.String(200))  # Original ID from source
+    import_date = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<PublicationSource {self.source_database}:{self.source_id}>'
+
+class DuplicateDetection:
+    """Service for detecting and managing duplicate articles."""
+    
+    @staticmethod
+    def find_duplicates(project_id: int) -> List[Dict]:
+        """Find potential duplicates in a project."""
+        articles = Article.query.filter_by(project_id=project_id).all()
+        duplicates = []
+        
+        doi_groups = {}
+        for article in articles:
+            if article.doi:
+                clean_doi = article.doi.strip().lower()
+                if clean_doi in doi_groups:
+                    doi_groups[clean_doi].append(article)
+                else:
+                    doi_groups[clean_doi] = [article]
+        
+        for doi, group in doi_groups.items():
+            if len(group) > 1:
+                duplicates.append({
+                    'type': 'doi_match',
+                    'identifier': doi,
+                    'articles': [a.id for a in group],
+                    'confidence': 1.0
+                })
+        
+        pmid_groups = {}
+        for article in articles:
+            if article.pmid:
+                clean_pmid = article.pmid.strip()
+                if clean_pmid in pmid_groups:
+                    pmid_groups[clean_pmid].append(article)
+                else:
+                    pmid_groups[clean_pmid] = [article]
+        
+        for pmid, group in pmid_groups.items():
+            if len(group) > 1:
+                duplicates.append({
+                    'type': 'pmid_match',
+                    'identifier': pmid,
+                    'articles': [a.id for a in group],
+                    'confidence': 1.0
+                })
+        
+        title_duplicates = DuplicateDetection._find_title_duplicates(articles)
+        duplicates.extend(title_duplicates)
+        
+        return duplicates
+    
+    @staticmethod
+    def _find_title_duplicates(articles: List[Article], threshold: float = 0.9) -> List[Dict]:
+        """Find duplicates based on title similarity."""
+        from difflib import SequenceMatcher
+        
+        duplicates = []
+        processed = set()
+        
+        for i, article1 in enumerate(articles):
+            if i in processed or not article1.title:
+                continue
+                
+            similar_articles = [article1]
+            
+            for j, article2 in enumerate(articles[i+1:], i+1):
+                if j in processed or not article2.title:
+                    continue
+                
+                similarity = SequenceMatcher(None, 
+                    article1.title.lower().strip(), 
+                    article2.title.lower().strip()
+                ).ratio()
+                
+                if similarity >= threshold:
+                    similar_articles.append(article2)
+                    processed.add(j)
+            
+            if len(similar_articles) > 1:
+                duplicates.append({
+                    'type': 'title_similarity',
+                    'identifier': article1.title[:50] + "...",
+                    'articles': [a.id for a in similar_articles],
+                    'confidence': max(SequenceMatcher(None, 
+                        similar_articles[0].title.lower(), 
+                        a.title.lower()
+                    ).ratio() for a in similar_articles[1:])
+                })
+                processed.add(i)
+        
+        return duplicates
+    
+    @staticmethod
+    def merge_duplicates(article_ids: List[int], keep_article_id: int) -> bool:
+        """Merge duplicate articles, keeping one as primary."""
+        try:
+            keep_article = Article.query.get(keep_article_id)
+            if not keep_article or keep_article_id not in article_ids:
+                return False
+            
+            merge_articles = Article.query.filter(
+                Article.id.in_([aid for aid in article_ids if aid != keep_article_id])
+            ).all()
+            
+            for article in merge_articles:
+                sources = PublicationSource.query.filter_by(article_id=article.id).all()
+                for source in sources:
+                    source.article_id = keep_article_id
+                
+                db.session.delete(article)
+            
+            db.session.commit()
+            return True
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Failed to merge duplicates: {e}")
+            return False

@@ -4,7 +4,7 @@ Implements the core dual-provider screening logic using OpenAI and Anthropic.
 """
 
 import logging
-from typing import List, Dict, Optional, Union, Literal
+from typing import List, Dict, Optional, Union, Literal, Any
 from dataclasses import dataclass
 from datetime import datetime
 import json
@@ -42,10 +42,29 @@ class ModelConfig:
             raise ValueError("Seed must be between 0 and 2^32")
 
 @dataclass 
+class MultiModelConfig:
+    """Configuration for multiple LLM providers."""
+    providers: List[ModelConfig]
+    consensus_strategy: str = "weighted_voting"  # weighted_voting, majority, unanimous
+    uncertainty_threshold: float = 0.6
+    
+    def __post_init__(self):
+        if len(self.providers) < 2:
+            raise ValueError("At least 2 providers required for multi-model screening")
+        
+        provider_names = [p.provider for p in self.providers]
+        if len(set(provider_names)) != len(provider_names):
+            raise ValueError("Duplicate providers not allowed")
+
+@dataclass 
 class DualModelConfig:
     """Configuration for both LLM providers."""
     openai_config: ModelConfig
     anthropic_config: ModelConfig
+    
+    def to_multi_config(self) -> MultiModelConfig:
+        """Convert to MultiModelConfig for unified processing."""
+        return MultiModelConfig(providers=[self.openai_config, self.anthropic_config])
 
 # ============================================================================
 # PYDANTIC MODELS FOR STRUCTURED OUTPUTS
@@ -357,6 +376,192 @@ class AnthropicProvider:
         Your response must be valid JSON only, no additional text.
         """
 
+class GoogleProvider:
+    """Google Gemini provider for screening."""
+    
+    def __init__(self, config: ModelConfig):
+        self.config = config
+        
+    async def screen_abstract(self, criteria: ScreeningCriteria, title: str, abstract: str) -> ComprehensiveScreeningResult:
+        """Screen abstract using Google Gemini."""
+        prompt = self._build_screening_prompt(criteria, title, abstract)
+        raise NotImplementedError("Google Gemini provider not yet implemented")
+        
+    def _build_screening_prompt(self, criteria: ScreeningCriteria, title: str, abstract: str) -> str:
+        """Build screening prompt for Google Gemini."""
+        return f"""
+        You are an expert systematic review researcher. Analyze the following abstract against the specified PICO-TT criteria and provide a comprehensive screening decision.
+
+        RESEARCH QUESTION: {criteria.research_question}
+
+        PICO-TT CRITERIA:
+        - Population: {criteria.target_population}
+        - Intervention: {criteria.target_intervention}
+        - Comparison: {criteria.target_comparison}
+        - Outcomes: {', '.join(criteria.target_outcomes)}
+        - Time Frame: {criteria.target_time_frame}
+        - Study Types: {', '.join(criteria.target_study_types)}
+
+        INCLUSION CRITERIA:
+        {chr(10).join(f"- {criterion}" for criterion in criteria.inclusion_criteria)}
+
+        EXCLUSION CRITERIA:
+        {chr(10).join(f"- {criterion}" for criterion in criteria.exclusion_criteria)}
+
+        ABSTRACT TO ANALYZE:
+        Title: {title}
+        Abstract: {abstract}
+
+        Provide your analysis in the following JSON format with the same structure as other providers.
+        """
+
+class OllamaProvider:
+    """Ollama local provider for screening."""
+    
+    def __init__(self, config: ModelConfig):
+        self.config = config
+        
+    async def screen_abstract(self, criteria: ScreeningCriteria, title: str, abstract: str) -> ComprehensiveScreeningResult:
+        """Screen abstract using Ollama local models."""
+        raise NotImplementedError("Ollama provider not yet implemented")
+        
+    def _build_screening_prompt(self, criteria: ScreeningCriteria, title: str, abstract: str) -> str:
+        """Build screening prompt for Ollama."""
+        return f"""
+        You are an expert systematic review researcher. Analyze the following abstract against the specified PICO-TT criteria and provide a comprehensive screening decision.
+
+        RESEARCH QUESTION: {criteria.research_question}
+
+        PICO-TT CRITERIA:
+        - Population: {criteria.target_population}
+        - Intervention: {criteria.target_intervention}
+        - Comparison: {criteria.target_comparison}
+        - Outcomes: {', '.join(criteria.target_outcomes)}
+        - Time Frame: {criteria.target_time_frame}
+        - Study Types: {', '.join(criteria.target_study_types)}
+
+        INCLUSION CRITERIA:
+        {chr(10).join(f"- {criterion}" for criterion in criteria.inclusion_criteria)}
+
+        EXCLUSION CRITERIA:
+        {chr(10).join(f"- {criterion}" for criterion in criteria.exclusion_criteria)}
+
+        ABSTRACT TO ANALYZE:
+        Title: {title}
+        Abstract: {abstract}
+
+        Provide your analysis in the following JSON format with the same structure as other providers.
+        """
+
+class MultiProviderScreeningOrchestrator:
+    """Orchestrate screening across multiple LLM providers."""
+    
+    def __init__(self, config: MultiModelConfig):
+        self.config = config
+        self.providers = self._initialize_providers()
+        
+    def _initialize_providers(self) -> Dict[str, Any]:
+        """Initialize provider instances based on configuration."""
+        providers = {}
+        for provider_config in self.config.providers:
+            if provider_config.provider == 'openai':
+                providers['openai'] = OpenAIProvider("", provider_config)
+            elif provider_config.provider == 'anthropic':
+                providers['anthropic'] = AnthropicProvider("", provider_config)
+            elif provider_config.provider == 'google':
+                providers['google'] = GoogleProvider(provider_config)
+            elif provider_config.provider == 'ollama':
+                providers['ollama'] = OllamaProvider(provider_config)
+            else:
+                raise ValueError(f"Unsupported provider: {provider_config.provider}")
+        return providers
+    
+    async def screen_article_multi_provider(self, criteria: ScreeningCriteria, title: str, abstract: str) -> Dict:
+        """Screen article using multiple providers."""
+        results = {}
+        
+        # Screen with all providers
+        for provider_name, provider in self.providers.items():
+            try:
+                result = await provider.screen_abstract(criteria, title, abstract)
+                results[provider_name] = result
+            except Exception as e:
+                logger.error(f"Provider {provider_name} failed: {e}")
+                results[provider_name] = None
+        
+        # Analyze consensus
+        consensus_analysis = self.analyze_multi_provider_consensus(results)
+        
+        review_triggers = MultiProviderReviewTriggers.should_trigger_human_review(
+            results, self.config.uncertainty_threshold
+        )
+        
+        return {
+            'provider_results': results,
+            'consensus_analysis': consensus_analysis,
+            'human_review_triggers': review_triggers,
+            'final_decision': self._determine_consensus_decision(results, consensus_analysis)
+        }
+    
+    def analyze_multi_provider_consensus(self, results: Dict) -> Dict:
+        """Analyze consensus across multiple providers."""
+        valid_results = {k: v for k, v in results.items() if v is not None}
+        
+        if len(valid_results) < 2:
+            return {
+                'consensus_reached': False,
+                'reason': 'Insufficient valid provider results',
+                'agreement_score': 0.0
+            }
+        
+        # Decision consensus
+        decisions = [r.screening_decision.final_decision for r in valid_results.values()]
+        decision_counts = {d: decisions.count(d) for d in set(decisions)}
+        majority_decision = max(decision_counts, key=decision_counts.get)
+        decision_consensus = decision_counts[majority_decision] / len(decisions)
+        
+        # Confidence consensus
+        confidences = [r.screening_decision.confidence_score for r in valid_results.values()]
+        avg_confidence = sum(confidences) / len(confidences)
+        confidence_variance = sum((c - avg_confidence) ** 2 for c in confidences) / len(confidences)
+        
+        agreement_score = decision_consensus * (1 - confidence_variance)
+        
+        return {
+            'consensus_reached': agreement_score >= 0.7,
+            'agreement_score': agreement_score,
+            'majority_decision': majority_decision,
+            'decision_distribution': decision_counts,
+            'average_confidence': avg_confidence,
+            'confidence_variance': confidence_variance,
+            'provider_count': len(valid_results)
+        }
+    
+    def _determine_consensus_decision(self, results: Dict, consensus_analysis: Dict) -> str:
+        """Determine final consensus decision using configured strategy."""
+        valid_results = {k: v for k, v in results.items() if v is not None}
+        
+        if not valid_results:
+            return 'UNCERTAIN'
+        
+        if self.config.consensus_strategy == "majority":
+            return consensus_analysis.get('majority_decision', 'UNCERTAIN')
+        
+        elif self.config.consensus_strategy == "weighted_voting":
+            weighted_votes = {}
+            for provider_name, result in valid_results.items():
+                decision = result.screening_decision.final_decision
+                confidence = result.screening_decision.confidence_score
+                weighted_votes[decision] = weighted_votes.get(decision, 0) + confidence
+            
+            return max(weighted_votes, key=weighted_votes.get) if weighted_votes else 'UNCERTAIN'
+        
+        elif self.config.consensus_strategy == "unanimous":
+            decisions = [r.screening_decision.final_decision for r in valid_results.values()]
+            return decisions[0] if len(set(decisions)) == 1 else 'UNCERTAIN'
+        
+        return 'UNCERTAIN'
+
 # ============================================================================
 # DUAL PROVIDER SCREENING ORCHESTRATOR
 # ============================================================================
@@ -461,6 +666,76 @@ class DualProviderScreeningOrchestrator:
 # ============================================================================
 # MATHEMATICAL TRIGGERS FOR HUMAN REVIEW
 # ============================================================================
+
+class MultiProviderReviewTriggers:
+    """Enhanced review triggers for multiple providers."""
+    
+    @staticmethod
+    def should_trigger_human_review(results: Dict, uncertainty_threshold: float = 0.6) -> Dict:
+        """Determine if human review should be triggered for multi-provider results."""
+        valid_results = {k: v for k, v in results.items() if v is not None}
+        triggers = []
+        
+        if len(valid_results) < 2:
+            triggers.append("Insufficient provider responses")
+            return {
+                'should_review': True,
+                'triggers': triggers,
+                'uncertainty_score': 1.0
+            }
+        
+        uncertainty_score = MultiProviderReviewTriggers._calculate_multi_uncertainty(valid_results)
+        
+        if uncertainty_score >= uncertainty_threshold:
+            triggers.append(f"High multi-provider uncertainty: {uncertainty_score:.2f}")
+        
+        decisions = [r.screening_decision.final_decision for r in valid_results.values()]
+        unique_decisions = set(decisions)
+        if len(unique_decisions) > 1:
+            triggers.append(f"Provider decision disagreement: {unique_decisions}")
+        
+        low_confidence_providers = []
+        for provider_name, result in valid_results.items():
+            if result.screening_decision.confidence_score < 0.5:
+                low_confidence_providers.append(f"{provider_name}: {result.screening_decision.confidence_score:.2f}")
+        
+        if low_confidence_providers:
+            triggers.append(f"Low confidence providers: {', '.join(low_confidence_providers)}")
+        
+        # Check for explicit review requests
+        review_requests = []
+        for provider_name, result in valid_results.items():
+            if result.screening_decision.requires_human_review:
+                review_requests.append(f"{provider_name}: {result.screening_decision.human_review_reason}")
+        
+        if review_requests:
+            triggers.extend(review_requests)
+        
+        return {
+            'should_review': len(triggers) > 0,
+            'uncertainty_score': uncertainty_score,
+            'triggers': triggers,
+            'trigger_count': len(triggers),
+            'provider_count': len(valid_results)
+        }
+    
+    @staticmethod
+    def _calculate_multi_uncertainty(results: Dict) -> float:
+        """Calculate uncertainty score for multiple providers."""
+        if len(results) < 2:
+            return 1.0
+        
+        # Decision variance
+        decisions = [r.screening_decision.final_decision for r in results.values()]
+        decision_entropy = len(set(decisions)) / len(decisions)
+        
+        # Confidence variance
+        confidences = [r.screening_decision.confidence_score for r in results.values()]
+        avg_confidence = sum(confidences) / len(confidences)
+        confidence_variance = sum((c - avg_confidence) ** 2 for c in confidences) / len(confidences)
+        
+        uncertainty = (decision_entropy * 0.6) + (confidence_variance * 0.4)
+        return min(uncertainty, 1.0)
 
 class HumanReviewTriggers:
     """Mathematical formulas to determine when human review is needed."""
