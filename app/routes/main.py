@@ -95,17 +95,24 @@ def upload_file(project_id):
         file.save(filepath)
         
         try:
-            # Parse the file
-            studies = load_studies(filepath)
+            # Read file content and parse the file
+            with open(filepath, 'r', encoding='utf-8') as f:
+                file_content = f.read()
+            studies = load_studies(file_content, filename)
             
             # Create articles in database
             articles_created = 0
             for study in studies:
+                # Convert authors list to string if it's a list
+                authors = study.get('authors', '')
+                if isinstance(authors, list):
+                    authors = ', '.join(authors)
+                
                 article = Article(
                     project_id=project_id,
                     title=study.get('title', ''),
-                    authors=study.get('authors', ''),
-                    journal=study.get('journal', ''),
+                    authors=authors,
+                    journal=study.get('journal_name', ''),
                     year=study.get('year'),
                     abstract=study.get('abstract', ''),
                     doi=study.get('doi', ''),
