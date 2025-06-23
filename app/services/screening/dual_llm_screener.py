@@ -103,6 +103,26 @@ class ComprehensiveScreeningResult(BaseModel):
 # ============================================================================
 
 @dataclass
+class ModelConfig:
+    """Configuration for LLM model parameters."""
+    provider: str  # openai, anthropic, ollama, lm_studio
+    model_name: str
+    temperature: float = 0.1
+    seed: Optional[int] = None
+    max_tokens: int = 4000
+    api_key: str = ""
+    api_endpoint: Optional[str] = None  # for local models
+    
+    def __post_init__(self):
+        """Validate configuration parameters."""
+        if not 0.0 <= self.temperature <= 2.0:
+            raise ValueError("Temperature must be between 0.0 and 2.0")
+        if self.seed is not None and not isinstance(self.seed, int):
+            raise ValueError("Seed must be an integer or None")
+        if self.max_tokens <= 0:
+            raise ValueError("Max tokens must be positive")
+
+@dataclass
 class ScreeningCriteria:
     """Configuration for screening criteria."""
     research_question: str
@@ -131,11 +151,15 @@ class ScreeningCriteria:
 # ============================================================================
 
 class OpenAIProvider:
-    """OpenAI provider using latest GPT models."""
+    """OpenAI provider with configurable parameters."""
     
-    def __init__(self, api_key: str):
-        self.client = OpenAI(api_key=api_key)
-        self.model_name = "gpt-4o"
+    def __init__(self, config: ModelConfig):
+        if not config.api_key:
+            raise ValueError("OpenAI API key is required")
+        
+        self.config = config
+        self.client = OpenAI(api_key=config.api_key)
+        self.model_name = config.model_name or "gpt-4o"
         self.provider_name = "openai"
     
     @retry_with_backoff(max_retries=3)
@@ -149,9 +173,9 @@ class OpenAIProvider:
         prompt = self._build_screening_prompt(abstract, title, criteria)
         
         try:
-            response = self.client.beta.chat.completions.parse(
-                model=self.model_name,
-                messages=[
+            request_params = {
+                "model": self.model_name,
+                "messages": [
                     {
                         "role": "system", 
                         "content": "You are an expert systematic review researcher. Analyze the provided abstract against the given criteria and provide a comprehensive structured assessment."
@@ -161,9 +185,15 @@ class OpenAIProvider:
                         "content": prompt
                     }
                 ],
-                response_format=ComprehensiveScreeningResult,
-                temperature=0.1
-            )
+                "response_format": ComprehensiveScreeningResult,
+                "temperature": self.config.temperature,
+                "max_tokens": self.config.max_tokens
+            }
+            
+            if self.config.seed is not None:
+                request_params["seed"] = self.config.seed
+            
+            response = self.client.beta.chat.completions.parse(**request_params)
             
             # Track usage for cost monitoring (temporarily disabled)
             # if hasattr(response, 'usage'):
@@ -223,11 +253,15 @@ class OpenAIProvider:
         """
 
 class AnthropicProvider:
-    """Anthropic provider using latest Claude models."""
+    """Anthropic provider with configurable parameters."""
     
-    def __init__(self, api_key: str):
-        self.client = Anthropic(api_key=api_key)
-        self.model_name = "claude-3-5-sonnet-20241022"
+    def __init__(self, config: ModelConfig):
+        if not config.api_key:
+            raise ValueError("Anthropic API key is required")
+        
+        self.config = config
+        self.client = Anthropic(api_key=config.api_key)
+        self.model_name = config.model_name or "claude-3-5-sonnet-20241022"
         self.provider_name = "anthropic"
     
     @retry_with_backoff(max_retries=3)
@@ -241,18 +275,21 @@ class AnthropicProvider:
         prompt = self._build_screening_prompt(abstract, title, criteria)
         
         try:
-            response = self.client.messages.create(
-                model=self.model_name,
-                max_tokens=4000,
-                temperature=0.1,
-                system="You are an expert systematic review researcher. Analyze the provided abstract against the given criteria and provide a comprehensive structured assessment. Respond ONLY with valid JSON matching the required schema.",
-                messages=[
+            request_params = {
+                "model": self.model_name,
+                "max_tokens": self.config.max_tokens,
+                "temperature": self.config.temperature,
+                "system": "You are an expert systematic review researcher. Analyze the provided abstract against the given criteria and provide a comprehensive structured assessment. Respond ONLY with valid JSON matching the required schema.",
+                "messages": [
                     {
                         "role": "user",
                         "content": prompt
                     }
                 ]
-            )
+            }
+            
+            
+            response = self.client.messages.create(**request_params)
             
             # Track usage for cost monitoring (temporarily disabled)
             # if hasattr(response, 'usage'):
@@ -328,9 +365,24 @@ class AnthropicProvider:
 class DualProviderScreeningOrchestrator:
     """Orchestrates screening using both OpenAI and Anthropic providers."""
     
-    def __init__(self, openai_api_key: str, anthropic_api_key: str):
-        self.openai_provider = OpenAIProvider(openai_api_key)
-        self.anthropic_provider = AnthropicProvider(anthropic_api_key)
+    def __init__(self, openai_config: ModelConfig, anthropic_config: ModelConfig):
+        self.openai_provider = OpenAIProvider(openai_config)
+        self.anthropic_provider = AnthropicProvider(anthropic_config)
+        
+    @classmethod
+    def create_with_api_keys(cls, openai_api_key: str, anthropic_api_key: str):
+        """Backward compatibility method for simple API key initialization."""
+        openai_config = ModelConfig(
+            provider="openai",
+            model_name="gpt-4o",
+            api_key=openai_api_key
+        )
+        anthropic_config = ModelConfig(
+            provider="anthropic", 
+            model_name="claude-3-5-sonnet-20241022",
+            api_key=anthropic_api_key
+        )
+        return cls(openai_config, anthropic_config)
         
     def screen_article_dual_provider(self, 
                                    article: Article, 
