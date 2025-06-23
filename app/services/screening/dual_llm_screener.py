@@ -17,7 +17,7 @@ from openai import OpenAI
 from anthropic import Anthropic
 
 from app.models.screening_models import db, Article
-from app.services.utils.cost_tracker import cost_tracker
+# from app.services.utils.cost_tracker import cost_tracker  # Temporarily disabled
 from app.services.utils.error_handler import retry_with_backoff
 from app.services.utils.exceptions import APIError, ValidationError
 
@@ -165,14 +165,14 @@ class OpenAIProvider:
                 temperature=0.1
             )
             
-            # Track usage for cost monitoring
-            if hasattr(response, 'usage'):
-                cost_tracker.record_api_call(
-                    project_id,
-                    self.model_name,
-                    response.usage.prompt_tokens,
-                    response.usage.completion_tokens
-                )
+            # Track usage for cost monitoring (temporarily disabled)
+            # if hasattr(response, 'usage'):
+            #     cost_tracker.record_api_call(
+            #         project_id,
+            #         self.model_name,
+            #         response.usage.prompt_tokens,
+            #         response.usage.completion_tokens
+            #     )
             
             result = response.choices[0].message.parsed
             
@@ -254,14 +254,14 @@ class AnthropicProvider:
                 ]
             )
             
-            # Track usage for cost monitoring
-            if hasattr(response, 'usage'):
-                cost_tracker.record_api_call(
-                    project_id,
-                    self.model_name,
-                    response.usage.input_tokens,
-                    response.usage.output_tokens
-                )
+            # Track usage for cost monitoring (temporarily disabled)
+            # if hasattr(response, 'usage'):
+            #     cost_tracker.record_api_call(
+            #         project_id,
+            #         self.model_name,
+            #         response.usage.input_tokens,
+            #         response.usage.output_tokens
+            #     )
             
             # Parse JSON response into Pydantic model
             response_text = response.content[0].text

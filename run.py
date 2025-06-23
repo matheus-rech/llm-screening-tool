@@ -7,14 +7,18 @@ Runs the Flask application using the factory pattern.
 import os
 from app import create_app, db
 
-# Create application instance
-app = create_app()
+# Create application instance with production config
+app = create_app('production')
+
+# Initialize database tables
+with app.app_context():
+    try:
+        db.create_all()
+        print("Database tables created successfully")
+    except Exception as e:
+        print(f"Database initialization error: {e}")
 
 if __name__ == '__main__':
-    # Create database tables if they don't exist
-    with app.app_context():
-        db.create_all()
-    
     # Run the application
     debug = os.getenv('FLASK_ENV') == 'development'
     port = int(os.getenv('PORT', 5000))
