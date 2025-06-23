@@ -18,6 +18,7 @@ from werkzeug.utils import secure_filename
 
 from app.models.screening_models import db, Project, Article
 from app.services.utils.file_parser import load_studies
+from app.services.screening.dual_llm_screener import ModelConfig, DualProviderScreeningOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -95,8 +96,11 @@ def upload_file(project_id):
         file.save(filepath)
         
         try:
+            file_content = file.read().decode('utf-8')
+            file.seek(0)  # Reset file pointer for saving
+            
             # Parse the file
-            studies = load_studies(filepath)
+            studies = load_studies(file_content, filename, entrez_email="")
             
             # Create articles in database
             articles_created = 0
@@ -265,3 +269,105 @@ def uploaded_file(filename):
 def result_file(filename):
     """Serve result files."""
     return send_from_directory('results', filename)
+
+@main_bp.route('/api/config/models', methods=['POST'])
+def update_model_config():
+    """Update LLM model configuration from dashboard UI."""
+    try:
+        data = request.get_json()
+        
+        model1_config = data.get('model1', {})
+        model2_config = data.get('model2', {})
+        
+        try:
+            openai_config = ModelConfig(
+                provider=model1_config.get('provider', 'anthropic'),
+                model_name=model1_config.get('model_name', 'claude-3-5-sonnet-20241022'),
+                temperature=float(model1_config.get('temperature', 0.1)),
+                seed=int(model1_config.get('seed')) if model1_config.get('seed') else None,
+                api_key=model1_config.get('api_key', ''),
+                api_endpoint=model1_config.get('api_endpoint', '')
+            )
+            
+            anthropic_config = ModelConfig(
+                provider=model2_config.get('provider', 'openai'),
+                model_name=model2_config.get('model_name', 'gpt-4o'),
+                temperature=float(model2_config.get('temperature', 0.1)),
+                seed=int(model2_config.get('seed')) if model2_config.get('seed') else None,
+                api_key=model2_config.get('api_key', ''),
+                api_endpoint=model2_config.get('api_endpoint', '')
+            )
+            
+            
+            return jsonify({
+                'success': True,
+                'message': 'Model configuration updated successfully',
+                'model1': {
+                    'provider': openai_config.provider,
+                    'model_name': openai_config.model_name,
+                    'temperature': openai_config.temperature,
+                    'seed': openai_config.seed
+                },
+                'model2': {
+                    'provider': anthropic_config.provider,
+                    'model_name': anthropic_config.model_name,
+                    'temperature': anthropic_config.temperature,
+                    'seed': anthropic_config.seed
+                }
+            })
+            
+        except ValueError as ve:
+            return jsonify({'error': f'Invalid configuration: {str(ve)}'}), 400
+            
+    except Exception as e:
+        logger.error(f"Error updating model configuration: {str(e)}")
+        return jsonify({'error': f'Configuration update failed: {str(e)}'}), 500
+
+@main_bp.route('/api/config/test-connection', methods=['POST'])
+def test_model_connection():
+    """Test connection to LLM provider with given configuration."""
+    try:
+        data = request.get_json()
+        model_key = data.get('model_key')  # 'model1' or 'model2'
+        config_data = data.get('config', {})
+        
+        test_config = ModelConfig(
+            provider=config_data.get('provider', 'openai'),
+            model_name=config_data.get('model_name', 'gpt-4o'),
+            temperature=float(config_data.get('temperature', 0.1)),
+            seed=int(config_data.get('seed')) if config_data.get('seed') else None,
+            api_key=config_data.get('api_key', ''),
+            api_endpoint=config_data.get('api_endpoint', '')
+        )
+        
+        if test_config.provider == 'openai':
+            from app.services.screening.dual_llm_screener import OpenAIProvider
+            provider = OpenAIProvider(test_config)
+            success = provider.client is not None
+        elif test_config.provider == 'anthropic':
+            from app.services.screening.dual_llm_screener import AnthropicProvider
+            provider = AnthropicProvider(test_config)
+            success = provider.client is not None
+        else:
+            success = False
+            
+        if success:
+            return jsonify({
+                'success': True,
+                'status': 'Connected',
+                'message': f'Successfully connected to {test_config.provider} with model {test_config.model_name}'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'status': 'Connection Failed',
+                'message': f'Failed to connect to {test_config.provider}'
+            })
+            
+    except Exception as e:
+        logger.error(f"Error testing connection: {str(e)}")
+        return jsonify({
+            'success': False,
+            'status': 'Connection Failed',
+            'message': f'Connection test failed: {str(e)}'
+        }), 500
