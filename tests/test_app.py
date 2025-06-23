@@ -1,0 +1,75 @@
+import pytest
+import json
+from app import Project, Article, db
+
+class TestRoutes:
+    """Test Flask application routes."""
+    
+    def test_index_route(self, client):
+        """Test the main index route."""
+        response = client.get('/')
+        assert response.status_code == 200
+        assert b'LLM Screening Tool' in response.data
+    
+    def test_create_project_route(self, client):
+        """Test project creation route."""
+        response = client.get('/create_project')
+        assert response.status_code == 200
+        assert b'Create New Project' in response.data
+    
+    def test_project_creation(self, client):
+        """Test actual project creation."""
+        project_data = {
+            'name': 'Test Project',
+            'population': 'Adults',
+            'intervention': 'Drug A',
+            'comparison': 'Placebo',
+            'outcomes': 'Blood pressure',
+            'time_frame': '3 months',
+            'study_types': 'RCT'
+        }
+        
+        response = client.post('/create_project', data=project_data)
+        assert response.status_code == 302  # Redirect after creation
+        
+        # Verify project was created
+        project = Project.query.filter_by(name='Test Project').first()
+        assert project is not None
+        assert project.population == 'Adults'
+
+class TestModels:
+    """Test database models."""
+    
+    def test_project_model(self, client):
+        """Test Project model creation and attributes."""
+        with client.application.app_context():
+            project = Project(
+                name="Test Project",
+                population="Test Population",
+                intervention="Test Intervention",
+                comparison="Test Comparison",
+                outcomes="Test Outcomes",
+                time_frame="Test Time",
+                study_types="Test Types"
+            )
+            db.session.add(project)
+            db.session.commit()
+            
+            assert project.id is not None
+            assert project.name == "Test Project"
+    
+    def test_article_model(self, client, sample_project):
+        """Test Article model creation and relationships."""
+        with client.application.app_context():
+            article = Article(
+                title="Test Article",
+                abstract="Test Abstract",
+                project_id=sample_project.id,
+                status="pending"
+            )
+            db.session.add(article)
+            db.session.commit()
+            
+            assert article.id is not None
+            assert article.project_id == sample_project.id
+            assert article.status == "pending"
