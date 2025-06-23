@@ -5,11 +5,10 @@ Creates and configures the Flask application instance.
 
 import os
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
-# Initialize extensions
-db = SQLAlchemy()
+# Import db from models to ensure single instance
+from app.models.screening_models import db
 migrate = Migrate()
 
 def create_app(config_name=None):

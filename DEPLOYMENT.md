@@ -7,7 +7,7 @@ This guide covers multiple deployment options for the LLM Screening Tool.
 Before deploying, ensure you have:
 - OpenAI API key (`OPENAI_API_KEY`)
 - Anthropic API key (`ANTHROPIC_API_KEY`)
-- Email address for PubMed access (`ENTREZ_EMAIL`)
+- Email address for PubMed access (`heroku_EMAIL`)
 
 ## Quick Deploy Options
 

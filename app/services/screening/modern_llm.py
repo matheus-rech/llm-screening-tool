@@ -25,7 +25,7 @@ from openai import OpenAI
 from anthropic import Anthropic
 
 from app.models.screening_models import db, Project, Article
-from app.services.utils.cost_tracker import cost_tracker
+# from app.services.utils.cost_tracker import cost_tracker  # Temporarily disabled
 from app.services.utils.error_handler import retry_with_backoff
 from app.services.utils.exceptions import APIError, ValidationError
 

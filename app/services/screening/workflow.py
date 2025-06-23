@@ -25,7 +25,7 @@ from .modern_llm import (
     ComprehensiveScreeningResult
 )
 from app.services.utils.concurrent_processor import OptimizedProcessor
-from app.services.utils.cost_tracker import cost_tracker
+# from app.services.utils.cost_tracker import cost_tracker  # Temporarily disabled
 
 logger = logging.getLogger(__name__)
 

@@ -13,7 +13,7 @@ Integration Points:
 from flask import Blueprint, request, jsonify, render_template, redirect, url_for, session
 from app.models.screening_models import db, Project, Article
 from app.services.ml.active_learning import active_learning_manager, ActiveLearningConfig
-from app.services.utils.cost_tracker import cost_tracker
+# from app.services.utils.cost_tracker import cost_tracker  # Temporarily disabled
 # from app.services.collaboration.collaborative_screening import collaborative_manager, ReviewerRole, DecisionStatus
 # from app.services.extraction.pico_extractor import pico_extraction_manager
 from app.services.utils.config_manager import ProjectConfiguration

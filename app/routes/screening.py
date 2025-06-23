@@ -22,7 +22,7 @@ from app.services.screening import (
     WorkflowProgress,
     ScreeningWorkflowFactory
 )
-from app.services.utils.cost_tracker import cost_tracker
+# from app.services.utils.cost_tracker import cost_tracker  # Temporarily disabled
 from app.services.utils.error_handler import handle_file_parsing_error
 from app.services.utils.exceptions import ValidationError
 

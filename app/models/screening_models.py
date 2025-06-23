@@ -7,7 +7,7 @@ from datetime import datetime
 import json
 from flask_sqlalchemy import SQLAlchemy
 
-# This will be imported from app/__init__.py
+# This db instance will be imported and used by app/__init__.py
 db = SQLAlchemy()
 
 class Project(db.Model):

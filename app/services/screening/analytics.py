@@ -16,7 +16,7 @@ from sqlalchemy import func
 
 from app.models.screening_models import db, Project, Article
 from .modern_llm import ComprehensiveScreeningResult
-from app.services.utils.cost_tracker import cost_tracker
+# from app.services.utils.cost_tracker import cost_tracker  # Temporarily disabled
 
 logger = logging.getLogger(__name__)
 
