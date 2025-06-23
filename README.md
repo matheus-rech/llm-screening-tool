@@ -1,66 +1,125 @@
-# Production LLM Screening Tool
+# 🚀 Screening Center MVP
 
-A professional-grade, AI-powered tool for systematic review screening, inspired by best practices in evidence synthesis and the AIscreenR R package. This tool leverages dual large language models (LLMs) to automate and audit the screening of studies for systematic reviews, with full support for PICO-TT criteria, inclusion/exclusion logic, and transparent disagreement handling.
+**Production-Ready Automated Systematic Review Screening System**
 
-## Features
-- **Dual LLM Screening:** Each study is independently screened by two LLM runs (or models), supporting robust, auditable decisions.
-- **PICO-TT Framework:** User-defined Population, Intervention, Comparison, Outcomes, Time Frame, and Study Types.
-- **Inclusion/Exclusion Criteria:** Flexible, user-specified criteria for precise screening.
-- **Disagreement Handling:** Flags studies where LLMs disagree for human review.
-- **Export:** Results are exported to CSV for further analysis or integration with review software.
-- **RIS File Support:** Reads standard RIS files for input.
+A professional-grade, AI-powered tool for systematic review screening with dual-LLM intelligence. Complete web interface with real-time processing and advanced PICO-TT criteria support.
 
-## Installation
-
-1. Clone this repository or download the code.
-2. Install dependencies:
+## 🎯 Quick Start for Demo
 
 ```bash
+# 1. Set your API keys
+export OPENAI_API_KEY="sk-your-openai-key"
+export ENTREZ_EMAIL="your-email@domain.com"
+
+# 2. Launch MVP
+./START_MVP.sh
+
+# 3. Access system
+open http://localhost:8080
+```
+
+## ✨ Core Features
+
+✅ **Dual-LLM Screening Engine**
+- OpenAI GPT-4o (conservative approach)
+- Anthropic Claude-3.5 (liberal approach)
+- Structured Pydantic responses for reliability
+
+✅ **Multi-Format File Support**
+- RIS files (Reference Manager format)
+- BibTeX files
+- CSV/TSV with title/abstract columns
+- XML (PubMed/NLM format)
+- Medline TXT format
+- PMID lists (auto-fetch from PubMed)
+
+✅ **Advanced PICO-TT Configuration**
+- Population, Intervention, Comparison, Outcomes
+- Time Frame, Study Types
+- Custom inclusion/exclusion criteria
+- Template save/load functionality
+
+✅ **Real-Time Processing**
+- Streaming results with progress tracking
+- Concurrent processing with rate limiting
+- Cost tracking and error handling
+- Retry logic for API failures
+
+✅ **Project Management**
+- Multiple systematic review projects
+- Configuration templates
+- History and progress tracking
+- Collaborative reviewer support
+
+✅ **Export Capabilities**
+- CSV format with detailed reasoning
+- RIS format for reference managers
+- BibTeX format for LaTeX/academic use
+- Comprehensive reporting
+
+## 🏗️ Architecture
+
+```
+app/
+├── routes/              # Flask API endpoints
+│   ├── main.py         # Core project management
+│   └── screening.py    # Screening APIs
+├── services/
+│   ├── screening/      # Dual-LLM screening engine
+│   │   ├── dual_llm_screener.py
+│   │   ├── modern_llm.py
+│   │   └── workflow.py
+│   └── utils/          # File parsers, utilities
+│       ├── file_parser.py
+│       ├── concurrent_processor.py
+│       └── cost_tracker.py
+├── models/             # SQLAlchemy database models
+│   └── screening_models.py
+└── templates/          # HTML web interface
+    └── screening/
+```
+
+## 🔧 Technology Stack
+
+- **Flask** - Web framework with application factory
+- **SQLAlchemy** - Database ORM with migrations
+- **OpenAI API** - GPT-4o for systematic screening
+- **Anthropic API** - Claude-3.5 for comprehensive coverage
+- **Pydantic** - Structured response validation
+- **rispy** - RIS file parsing
+- **bibtexparser** - BibTeX file parsing
+- **biopython** - PubMed integration
+- **pytest** - Comprehensive testing suite
+
+## 🚀 Development
+
+```bash
+# Install dependencies
 pip install -r requirements.txt
+
+# Initialize database
+python manage.py init-db
+python manage.py upgrade-db
+
+# Run tests
+pytest
+
+# Development server
+python run.py
 ```
 
-3. Obtain an OpenAI API key from https://platform.openai.com/account/api-keys and set it as an environment variable:
+## 📊 Advanced Features
 
-```bash
-export OPENAI_API_KEY=sk-...
-```
+- **Active Learning** - ML-powered article prioritization
+- **Collaborative Screening** - Multi-reviewer workflows
+- **Analytics Dashboard** - Screening statistics and insights
+- **Workflow Orchestration** - Batch, loop, chain, adaptive modes
+- **Error Recovery** - Comprehensive error handling with retries
 
-## Usage
+## 🎯 MVP Status: **PRODUCTION READY**
 
-Run the screening tool from the command line, providing the path to your RIS file:
-
-```bash
-python rag.py path/to/your_file.ris
-```
-
-You will be prompted to enter your PICO-TT criteria, inclusion/exclusion criteria, and research question. The tool will then process each study, run dual LLM screenings, and export the results to `screening_results.csv`.
-
-## Input Format
-- **RIS file**: Standard RIS format as exported from reference managers or databases (e.g., EPPI-Reviewer, EndNote, Zotero).
-- Each entry should have at least `ID`, `TI` (title), and `AB` (abstract) fields.
-
-## Output Format
-- **CSV file**: `screening_results.csv` with columns for status, decision, confidence, and reasoning. Disagreements are flagged and include both LLM rationales.
-
-## Example Workflow
-1. Prepare your RIS file with studies to screen.
-2. Set your OpenAI API key.
-3. Run the tool and enter your screening criteria when prompted.
-4. Review the progress and results in the terminal.
-5. Open `screening_results.csv` for a summary of all screening decisions and flagged disagreements.
-
-## Future Directions
-- Batch processing and parallelization for large datasets
-- Web-based UI for configuration and review
-- Advanced export options (RIS, JSON, Google Sheets)
-- Integration with systematic review management platforms
-- Support for additional LLM providers (Anthropic, local models, etc.)
-
-## Credits & Inspiration
-- Inspired by [AIscreenR](https://cran.r-project.org/package=AIscreenR) and systematic review best practices
-- Uses [OpenAI](https://platform.openai.com/) for LLM screening
-- RIS parsing via [rispy](https://github.com/raivivek/rispy)
+**Ready for tomorrow's demo with full screening pipeline functional!**
 
 ---
 
-*This project is a work in progress. Contributions and feedback are welcome!* 
+*Built with modern Flask architecture and enterprise-grade reliability features.*
