@@ -156,4 +156,60 @@ def load_studies(file_content: str, filename: str, entrez_email: str = "") -> Li
             raise ValueError("Email is required for fetching PubMed data.")
         return parse_pmid_file_and_fetch(file_content, entrez_email)
     else:
-        raise ValueError(f"Unsupported file format: {file_format}") 
+        raise ValueError(f"Unsupported file format: {file_format}")
+
+def load_studies_with_source_tracking(file_content: str, filename: str, entrez_email: str = "") -> tuple:
+    """
+    Load studies and determine source database.
+    Returns: (studies, source_database)
+    """
+    file_format = detect_file_format(filename)
+    
+    source_database = detect_source_database(filename, file_content)
+    
+    if file_format == "ris":
+        studies = parse_ris_file(file_content)
+    elif file_format == "csv":
+        studies = parse_csv_file(file_content)
+    elif file_format == "tsv":
+        studies = parse_tsv_file(file_content)
+    elif file_format == "xml":
+        studies = parse_xml_file(file_content)
+    elif file_format == "bibtex":
+        studies = parse_bibtex_file(file_content)
+    elif file_format == "medline":
+        studies = parse_medline_txt_file(file_content)
+    elif file_format == "pmid_list":
+        if not entrez_email:
+            raise ValueError("Email is required for fetching PubMed data.")
+        studies = parse_pmid_file_and_fetch(file_content, entrez_email)
+        source_database = "PubMed"  # Override for PMID lists
+    else:
+        raise ValueError(f"Unsupported file format: {file_format}")
+    
+    return studies, source_database
+
+def detect_source_database(filename: str, content: str) -> str:
+    """Detect source database from filename or content patterns."""
+    filename_lower = filename.lower()
+    
+    if "pubmed" in filename_lower or "medline" in filename_lower:
+        return "PubMed"
+    elif "scopus" in filename_lower:
+        return "Scopus"
+    elif "embase" in filename_lower:
+        return "Embase"
+    elif "webofscience" in filename_lower or "wos" in filename_lower:
+        return "Web of Science"
+    elif "cochrane" in filename_lower:
+        return "Cochrane Library"
+    
+    if content.startswith("TY  -"):
+        if "DB  - PubMed" in content or "DP  -" in content:
+            return "PubMed"
+        elif "DB  - Scopus" in content:
+            return "Scopus"
+        elif "DB  - Embase" in content:
+            return "Embase"
+    
+    return "Unknown"  
