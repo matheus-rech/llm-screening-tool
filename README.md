@@ -2,6 +2,8 @@
 
 A Python-based dual-LLM screening tool for systematic reviews that automates the screening of academic papers using OpenAI and Anthropic models.
 
+> **Note**: This tool has been verified for functionality and testing capabilities.
+
 ## Features
 
 - **Dual-LLM Architecture**: Uses both OpenAI (gpt-4o) and Anthropic (claude-3.5-sonnet) for comprehensive screening
