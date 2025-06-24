@@ -808,6 +808,44 @@ def list_templates():
     
     return jsonify({'success': True, 'templates': templates})
 
+@modern_screening_bp.route('/project/<int:project_id>/statistics', methods=['GET'])
+def get_project_statistics(project_id):
+    """Get project statistics for PRISMA flowchart."""
+    try:
+        from app.models.project import Project
+        from app.models.article import Article
+        
+        project = Project.query.get_or_404(project_id)
+        
+        articles = Article.query.filter_by(project_id=project_id).all()
+        
+        # Calculate statistics
+        total_articles = len(articles)
+        screened_articles = len([a for a in articles if a.status != 'pending'])
+        included_articles = len([a for a in articles if a.status == 'included'])
+        excluded_articles = len([a for a in articles if a.status == 'excluded'])
+        pending_articles = len([a for a in articles if a.status == 'pending'])
+        duplicate_articles = 0  # TODO: Implement duplicate detection
+        
+        return jsonify({
+            'success': True,
+            'total_articles': total_articles,
+            'screened_articles': screened_articles,
+            'included_articles': included_articles,
+            'excluded_articles': excluded_articles,
+            'pending_articles': pending_articles,
+            'duplicate_articles': duplicate_articles,
+            'project_name': project.name,
+            'project_id': project_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching project statistics: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Failed to fetch project statistics: {str(e)}'
+        }), 500
+
 # ============================================================================
 # ERROR HANDLERS
 # ============================================================================
