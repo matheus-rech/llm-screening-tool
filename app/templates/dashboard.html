@@ -891,15 +891,17 @@ function llmScreeningTool() {
         getAvailableModels(provider) {
             const modelOptions = {
                 'openai': [
+                    { value: 'gpt-4.1', label: 'GPT-4.1' },
+                    { value: 'o3', label: 'o3 (Reasoning)' },
+                    { value: 'o4-mini', label: 'o4-mini (Fast Reasoning)' },
                     { value: 'gpt-4o', label: 'GPT-4o' },
-                    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-                    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-                    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' }
+                    { value: 'gpt-4o-mini', label: 'GPT-4o Mini' }
                 ],
                 'anthropic': [
+                    { value: 'claude-3-7-sonnet-20250219', label: 'Claude Sonnet 3.7' },
+                    { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
                     { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-                    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
-                    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' }
+                    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' }
                 ],
                 'ollama': [
                     { value: 'llama3.1:8b', label: 'Llama 3.1 8B' },
@@ -941,8 +943,8 @@ function llmScreeningTool() {
             const configData = {
                 temperature: this.model1.temperature,
                 seed: this.model1.seed || null,
-                openai_model: this.model2.provider === 'openai' ? this.model2.model_name : 'gpt-4o',
-                anthropic_model: this.model1.provider === 'anthropic' ? this.model1.model_name : 'claude-3-5-sonnet-20241022'
+                openai_model: this.model2.provider === 'openai' ? this.model2.model_name : 'gpt-4.1',
+                anthropic_model: this.model1.provider === 'anthropic' ? this.model1.model_name : 'claude-3-7-sonnet-20250219'
             };
 
             // Send configuration to backend using the new endpoint

@@ -312,7 +312,7 @@ def process_article(article_id):
     # Create OpenAI configuration
     openai_config = ModelConfig(
         provider=model1_config.get('provider', 'openai'),
-        model_name=model1_config.get('model_name', 'gpt-4o'),
+        model_name=model1_config.get('model_name', 'gpt-4.1'),
         temperature=float(model1_config.get('temperature', llm_config.get('openaiTemperature', 0.1))),
         seed=int(model1_config['seed']) if model1_config.get('seed') else llm_config.get('openaiSeed'),
         max_tokens=4000
@@ -321,7 +321,7 @@ def process_article(article_id):
     # Create Anthropic configuration  
     anthropic_config = ModelConfig(
         provider=model2_config.get('provider', 'anthropic'),
-        model_name=model2_config.get('model_name', 'claude-3-5-sonnet-20241022'),
+        model_name=model2_config.get('model_name', 'claude-3-7-sonnet-20250219'),
         temperature=float(model2_config.get('temperature', llm_config.get('anthropicTemperature', 0.1))),
         seed=int(model2_config['seed']) if model2_config.get('seed') else llm_config.get('anthropicSeed'),
         max_tokens=4000
