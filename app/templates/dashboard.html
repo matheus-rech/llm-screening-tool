@@ -1221,6 +1221,13 @@ function llmScreeningTool() {
             setInterval(() => {
                 this.updateStatusBar();
             }, 5000); // Update every 5 seconds
+            
+            // Watch for tab changes to update PRISMA flowchart
+            this.$watch('activeTab', (newTab) => {
+                if (newTab === 'prisma') {
+                    this.updatePrismaTab();
+                }
+            });
         }
     }
 }
