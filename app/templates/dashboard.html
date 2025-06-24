@@ -123,6 +123,38 @@
         </div>
     </header>
 
+    <!-- System Status Bar -->
+    <div class="bg-gray-800 border-b border-gray-600 px-4 py-2 text-sm">
+        <div class="container mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-6">
+                <div class="flex items-center space-x-2">
+                    <span class="text-gray-400">Temperature:</span>
+                    <span class="text-blue-400 font-mono" x-text="model1.temperature"></span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-gray-400">Seed:</span>
+                    <span class="text-blue-400 font-mono" x-text="model1.seed || 'None'"></span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-gray-400">Models:</span>
+                    <span class="text-green-400 font-mono" x-text="model1.model_name"></span>
+                    <span class="text-gray-500">|</span>
+                    <span class="text-purple-400 font-mono" x-text="model2.model_name"></span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <div class="w-2 h-2 rounded-full" :class="model1.status.color === 'green' ? 'bg-green-400' : model1.status.color === 'yellow' ? 'bg-yellow-400' : 'bg-red-400'"></div>
+                    <span class="text-gray-400" x-text="model1.provider.toUpperCase()"></span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <div class="w-2 h-2 rounded-full" :class="model2.status.color === 'green' ? 'bg-green-400' : model2.status.color === 'yellow' ? 'bg-yellow-400' : 'bg-red-400'"></div>
+                    <span class="text-gray-400" x-text="model2.provider.toUpperCase()"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Navigation Tabs -->
     <div class="bg-gray-800 border-b border-gray-700">
         <div class="container mx-auto px-4">
@@ -161,10 +193,18 @@
                 <div class="card">
                     <div class="card-header"><h3 class="text-lg font-semibold">Quick Stats</h3></div>
                     <div class="p-4 space-y-2 text-sm">
+                        {% set total_articles = [] %}
+                        {% set total_included = [] %}
+                        {% set total_excluded = [] %}
+                        {% for project in projects %}
+                            {% set _ = total_articles.extend(project.articles) %}
+                            {% set _ = total_included.extend(project.articles|selectattr('status', 'equalto', 'included')|list) %}
+                            {% set _ = total_excluded.extend(project.articles|selectattr('status', 'equalto', 'excluded')|list) %}
+                        {% endfor %}
                         <p>Total Projects: <span class="font-bold float-right">{{ projects|length }}</span></p>
-                        <p>Total Articles: <span class="font-bold float-right">0</span></p>
-                        <p>Included: <span class="font-bold float-right text-green-400">0</span></p>
-                        <p>Excluded: <span class="font-bold float-right text-red-400">0</span></p>
+                        <p>Total Articles: <span class="font-bold float-right">{{ total_articles|length }}</span></p>
+                        <p>Included: <span class="font-bold float-right text-green-400">{{ total_included|length }}</span></p>
+                        <p>Excluded: <span class="font-bold float-right text-red-400">{{ total_excluded|length }}</span></p>
                         <p>Conflicts: <span class="font-bold float-right text-yellow-400">0</span></p>
                     </div>
                 </div>
@@ -219,11 +259,11 @@
                                         <p class="text-gray-400">Articles</p>
                                     </div>
                                     <div>
-                                        <p class="text-xl font-bold text-green-400">0</p>
+                                        <p class="text-xl font-bold text-green-400">{{ project.articles|selectattr('status', 'equalto', 'included')|list|length }}</p>
                                         <p class="text-gray-400">Included</p>
                                     </div>
                                     <div>
-                                        <p class="text-xl font-bold text-red-400">0</p>
+                                        <p class="text-xl font-bold text-red-400">{{ project.articles|selectattr('status', 'equalto', 'excluded')|list|length }}</p>
                                         <p class="text-gray-400">Excluded</p>
                                     </div>
                                 </div>
@@ -307,8 +347,8 @@
                      <!-- Action Buttons -->
                     <div class="flex justify-end space-x-2">
                         <button class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-md text-white font-semibold shadow-md">Test Criteria</button>
-                        <button class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-md text-white font-semibold shadow-md">Load Template</button>
-                        <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white font-semibold shadow-md">Save Template</button>
+                        <button class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-md text-white font-semibold shadow-md" onclick="loadTemplate()">Load Template</button>
+                        <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white font-semibold shadow-md" onclick="saveTemplate()">Save Template</button>
                     </div>
                 </div>
             </div>
@@ -461,8 +501,12 @@
                          <div class="card-header"><h3 class="text-lg font-semibold">Processing Queue</h3></div>
                         <div class="p-4">
                             <div class="flex justify-center items-center h-40 border-2 border-dashed border-gray-600 rounded-md text-gray-500">
-                                <p class="text-center">Drag & drop XML, RIS, SCRN files here or <button class="text-blue-400 hover:underline">browse</button>.</p>
+                                <div class="text-center">
+                                    <p class="mb-3">Drag & drop XML, RIS, SCRN files here or <span class="text-blue-400 hover:underline cursor-pointer" onclick="document.getElementById('file-upload').click()">browse</span>.</p>
+                                    <button class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md text-white font-semibold shadow-md" onclick="loadSampleData()">Load Sample Data</button>
+                                </div>
                             </div>
+                            <input type="file" id="file-upload" accept=".ris,.bib,.xml,.csv" style="display: none;" onchange="handleFileUpload(this)">
                         </div>
                     </div>
                     <div class="card">
@@ -496,34 +540,40 @@
                                         </div>
                                     </div>
                                     <div x-show="expanded" x-cloak class="p-4 border-t border-gray-600" x-transition>
-                                        <h4 class="font-semibold mb-2">Abstract</h4>
-                                        <p class="text-sm text-gray-300 mb-4" x-text="study.abstract"></p>
-                                        <h4 class="font-semibold mb-2">PICO-TT Scoring</h4>
-                                        <div class="mb-4">
-                                            <template x-for="score in study.pico" :key="score.label">
-                                                <div class="pico-score">
-                                                    <span class="pico-label" x-text="score.label"></span>
-                                                    <div class="pico-bar-container">
-                                                        <div class="pico-bar" :style="`width: ${score.value}%; background-color: ${picoColor(score.value)}`" x-text="`${score.value}%`"></div>
+                                        <h3 class="text-lg font-bold mb-3 text-blue-400">Abstract</h3>
+                                        <div class="bg-gray-800 p-4 rounded-lg mb-6 border-l-4 border-blue-500">
+                                            <p class="text-base text-gray-100 leading-relaxed" x-text="study.abstract"></p>
+                                        </div>
+                                        <h3 class="text-lg font-bold mb-3 text-green-400">AI Classification Results</h3>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                            <div class="bg-gray-800 p-4 rounded-lg border-l-4 border-green-500">
+                                                <p class="font-bold mb-2 text-green-400">Model 1 (Conservative)</p>
+                                                <p class="mb-2"><span class="font-semibold">Decision:</span> <span class="text-lg font-bold ml-2" :class="study.model1.decision === 'Include' ? 'text-green-400' : 'text-red-400'" x-text="study.model1.decision"></span></p>
+                                                <p class="mb-3"><span class="font-semibold">Confidence:</span> <span class="text-lg font-bold ml-2 text-blue-400" x-text="`${study.model1.confidence}%`"></span></p>
+                                                <p><span class="font-semibold">Reasoning:</span></p>
+                                                <p class="text-gray-300 mt-1 italic" x-text="study.model1.reasoning"></p>
+                                            </div>
+                                            <div class="bg-gray-800 p-4 rounded-lg border-l-4 border-purple-500">
+                                                <p class="font-bold mb-2 text-purple-400">Model 2 (Pragmatic)</p>
+                                                <p class="mb-2"><span class="font-semibold">Decision:</span> <span class="text-lg font-bold ml-2" :class="study.model2.decision === 'Include' ? 'text-green-400' : 'text-red-400'" x-text="study.model2.decision"></span></p>
+                                                <p class="mb-3"><span class="font-semibold">Confidence:</span> <span class="text-lg font-bold ml-2 text-blue-400" x-text="`${study.model2.confidence}%`"></span></p>
+                                                <p><span class="font-semibold">Reasoning:</span></p>
+                                                <p class="text-gray-300 mt-1 italic" x-text="study.model2.reasoning"></p>
+                                            </div>
+                                        </div>
+                                        <details class="mb-4">
+                                            <summary class="cursor-pointer text-sm font-semibold text-gray-400 hover:text-gray-300">PICO-TT Extraction Details</summary>
+                                            <div class="mt-3 pl-4">
+                                                <template x-for="score in study.pico" :key="score.label">
+                                                    <div class="pico-score mb-2">
+                                                        <span class="pico-label text-xs" x-text="score.label"></span>
+                                                        <div class="pico-bar-container">
+                                                            <div class="pico-bar" :style="`width: ${score.value}%; background-color: ${picoColor(score.value)}`" x-text="`${score.value}%`"></div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </template>
-                                        </div>
-                                        <h4 class="font-semibold mb-2">AI Analysis</h4>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                            <div class="bg-gray-800 p-3 rounded">
-                                                <p class="font-bold mb-1">Model 1 (Conservative)</p>
-                                                <p><span class="font-semibold">Decision:</span> <span :class="study.model1.decision === 'Include' ? 'text-green-400' : 'text-red-400'" x-text="study.model1.decision"></span></p>
-                                                <p><span class="font-semibold">Confidence:</span> <span x-text="`${study.model1.confidence}%`"></span></p>
-                                                <p class="mt-2"><span class="font-semibold">Reasoning:</span> <span class="text-gray-400" x-text="study.model1.reasoning"></span></p>
+                                                </template>
                                             </div>
-                                            <div class="bg-gray-800 p-3 rounded">
-                                                <p class="font-bold mb-1">Model 2 (Pragmatic)</p>
-                                                <p><span class="font-semibold">Decision:</span> <span :class="study.model2.decision === 'Include' ? 'text-green-400' : 'text-red-400'" x-text="study.model2.decision"></span></p>
-                                                <p><span class="font-semibold">Confidence:</span> <span x-text="`${study.model2.confidence}%`"></span></p>
-                                                <p class="mt-2"><span class="font-semibold">Reasoning:</span> <span class="text-gray-400" x-text="study.model2.reasoning"></span></p>
-                                            </div>
-                                        </div>
+                                        </details>
                                          <div class="mt-4 flex justify-end space-x-2">
                                             <button class="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded text-sm">Add Note</button>
                                             <button class="px-3 py-1 bg-yellow-600 hover:bg-yellow-500 rounded text-sm">Flag for Review</button>
@@ -594,11 +644,11 @@
                                         <p class="text-gray-400">Articles</p>
                                     </div>
                                     <div>
-                                        <p class="text-xl font-bold text-green-400">0</p>
+                                        <p class="text-xl font-bold text-green-400">{{ project.articles|selectattr('status', 'equalto', 'included')|list|length }}</p>
                                         <p class="text-gray-400">Included</p>
                                     </div>
                                     <div>
-                                        <p class="text-xl font-bold text-red-400">0</p>
+                                        <p class="text-xl font-bold text-red-400">{{ project.articles|selectattr('status', 'equalto', 'excluded')|list|length }}</p>
                                         <p class="text-gray-400">Excluded</p>
                                     </div>
                                 </div>
@@ -608,11 +658,19 @@
                                     <button @click="activeTab = 'screening'" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-4 rounded-lg text-sm font-medium">
                                         Open Project
                                     </button>
+                                    {% if project.has_screening_results %}
                                     <a href="{{ url_for('main.export_dual_llm_comparison', project_id=project.id) }}" 
                                        class="bg-green-600 hover:bg-green-700 text-white p-2 rounded-lg text-sm font-medium flex items-center justify-center"
                                        title="Export Dual-LLM Comparison">
                                         📊
                                     </a>
+                                    {% else %}
+                                    <button class="bg-gray-500 text-gray-300 p-2 rounded-lg text-sm font-medium flex items-center justify-center cursor-not-allowed"
+                                            title="No screening results available for export"
+                                            disabled>
+                                        📊
+                                    </button>
+                                    {% endif %}
                                     <button class="bg-gray-600 hover:bg-gray-500 text-white p-2 rounded-lg text-sm">
                                         ⚙️
                                     </button>
@@ -879,28 +937,16 @@ function llmScreeningTool() {
         saveConfiguration() {
             this.addLog('Saving configuration...', 'text-blue-400');
             
-            // Prepare configuration data
+            // Prepare configuration data for the new API endpoint
             const configData = {
-                model1: {
-                    provider: this.model1.provider,
-                    model_name: this.model1.model_name,
-                    temperature: this.model1.temperature,
-                    seed: this.model1.seed,
-                    api_key: this.model1.api_key,
-                    api_endpoint: this.model1.api_endpoint
-                },
-                model2: {
-                    provider: this.model2.provider,
-                    model_name: this.model2.model_name,
-                    temperature: this.model2.temperature,
-                    seed: this.model2.seed,
-                    api_key: this.model2.api_key,
-                    api_endpoint: this.model2.api_endpoint
-                }
+                temperature: this.model1.temperature,
+                seed: this.model1.seed || null,
+                openai_model: this.model2.provider === 'openai' ? this.model2.model_name : 'gpt-4o',
+                anthropic_model: this.model1.provider === 'anthropic' ? this.model1.model_name : 'claude-3-5-sonnet-20241022'
             };
 
-            // Send configuration to backend
-            fetch('/api/config/models', {
+            // Send configuration to backend using the new endpoint
+            fetch('/api/model-config', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -910,7 +956,7 @@ function llmScreeningTool() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    this.addLog('Configuration saved successfully!', 'text-green-400');
+                    this.addLog('Model configuration saved successfully!', 'text-green-400');
                 } else {
                     this.addLog(`Configuration save failed: ${data.error}`, 'text-red-400');
                 }
@@ -922,9 +968,209 @@ function llmScreeningTool() {
 
         autoSaveConfiguration() {
             // Auto-save configuration when values change
-            this.saveConfiguration();
+            clearTimeout(this.saveTimeout);
+            this.saveTimeout = setTimeout(() => {
+                this.saveConfiguration();
+            }, 1000); // Debounce saves by 1 second
+        },
+
+        loadConfiguration() {
+            // Load current configuration from backend
+            fetch('/api/model-config', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.config) {
+                    // Update model configurations with loaded values
+                    this.model1.temperature = data.config.temperature;
+                    this.model1.seed = data.config.seed;
+                    this.model2.temperature = data.config.temperature;
+                    this.model2.seed = data.config.seed;
+                    
+                    // Update model names based on provider
+                    if (this.model1.provider === 'anthropic') {
+                        this.model1.model_name = data.config.anthropic_model;
+                    }
+                    if (this.model2.provider === 'openai') {
+                        this.model2.model_name = data.config.openai_model;
+                    }
+                    
+                    this.addLog('Configuration loaded successfully!', 'text-green-400');
+                    this.updateStatusBar();
+                } else {
+                    this.addLog('Failed to load configuration', 'text-yellow-400');
+                }
+            })
+            .catch(error => {
+                this.addLog(`Failed to load configuration: ${error.message}`, 'text-red-400');
+            });
+        },
+
+        updateStatusBar() {
+            // Force Alpine.js to update the status bar display
+            this.$nextTick(() => {
+                // Status bar will automatically update due to reactive data binding
+            });
+        },
+
+        init() {
+            // Initialize the dashboard and load configuration
+            this.loadConfiguration();
+            
+            // Set up periodic status updates
+            setInterval(() => {
+                this.updateStatusBar();
+            }, 5000); // Update every 5 seconds
         }
     }
+}
+
+function handleFileUpload(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Get current project ID from URL or session
+        const projectId = window.location.pathname.match(/\/project\/(\d+)/)?.[1];
+        if (!projectId) {
+            alert('No active project found. Please create a project first.');
+            return;
+        }
+        
+        fetch(`/project/${projectId}/upload`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Successfully uploaded ${data.articles_count} articles`);
+                location.reload(); // Refresh to show uploaded articles
+            } else {
+                alert(`Upload failed: ${data.error}`);
+            }
+        })
+        .catch(error => {
+            alert(`Upload failed: ${error.message}`);
+        });
+    }
+}
+
+function saveTemplate() {
+    const templateName = prompt('Enter template name:');
+    if (!templateName) return;
+    
+    const templateData = {
+        name: templateName,
+        research_question: document.querySelector('textarea[placeholder*="research question"]').value,
+        population: document.querySelector('textarea[placeholder*="Population"]').value,
+        intervention: document.querySelector('textarea[placeholder*="Intervention"]').value,
+        comparison: document.querySelector('textarea[placeholder*="Comparison"]').value,
+        outcomes: document.querySelector('textarea[placeholder*="Outcomes"]').value,
+        time_frame: document.querySelector('textarea[placeholder*="Time Frame"]').value,
+        study_types: document.querySelector('textarea[placeholder*="Study Types"]').value,
+        inclusion_criteria: Array.from(document.querySelectorAll('input[placeholder*="Criterion"]'))
+            .filter(input => input.closest('div').querySelector('h3') && input.closest('div').querySelector('h3').textContent.includes('Inclusion'))
+            .map(input => input.value).filter(val => val.trim()),
+        exclusion_criteria: Array.from(document.querySelectorAll('input[placeholder*="Criterion"]'))
+            .filter(input => input.closest('div').querySelector('h3') && input.closest('div').querySelector('h3').textContent.includes('Exclusion'))
+            .map(input => input.value).filter(val => val.trim())
+    };
+    
+    fetch('/config/templates/save', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(templateData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Template saved successfully!');
+        } else {
+            alert('Failed to save template: ' + data.error);
+        }
+    })
+    .catch(error => alert('Error saving template: ' + error.message));
+}
+
+function loadTemplate() {
+    fetch('/config/templates/list')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.templates.length > 0) {
+            const templateName = prompt('Available templates:\n' + data.templates.join('\n') + '\n\nEnter template name to load:');
+            if (templateName && data.templates.includes(templateName)) {
+                fetch(`/config/templates/load/${templateName}`)
+                .then(response => response.json())
+                .then(loadData => {
+                    if (loadData.success) {
+                        populateFormWithTemplate(loadData.template);
+                        alert('Template loaded successfully!');
+                    } else {
+                        alert('Failed to load template: ' + loadData.error);
+                    }
+                });
+            }
+        } else {
+            alert('No templates available');
+        }
+    })
+    .catch(error => alert('Error loading templates: ' + error.message));
+}
+
+function populateFormWithTemplate(template) {
+    document.querySelector('textarea[placeholder*="research question"]').value = template.research_question || '';
+    document.querySelector('textarea[placeholder*="Population"]').value = template.population || '';
+    document.querySelector('textarea[placeholder*="Intervention"]').value = template.intervention || '';
+    document.querySelector('textarea[placeholder*="Comparison"]').value = template.comparison || '';
+    document.querySelector('textarea[placeholder*="Outcomes"]').value = template.outcomes || '';
+    document.querySelector('textarea[placeholder*="Time Frame"]').value = template.time_frame || '';
+    document.querySelector('textarea[placeholder*="Study Types"]').value = template.study_types || '';
+    
+    // Populate criteria fields
+    const inclusionInputs = Array.from(document.querySelectorAll('input[placeholder*="Criterion"]'))
+        .filter(input => input.closest('h3').textContent.includes('Inclusion'));
+    const exclusionInputs = Array.from(document.querySelectorAll('input[placeholder*="Criterion"]'))
+        .filter(input => input.closest('h3').textContent.includes('Exclusion'));
+    
+    template.inclusion_criteria.forEach((criterion, index) => {
+        if (inclusionInputs[index]) inclusionInputs[index].value = criterion;
+    });
+    
+    template.exclusion_criteria.forEach((criterion, index) => {
+        if (exclusionInputs[index]) exclusionInputs[index].value = criterion;
+    });
+}
+
+function loadSampleData() {
+    const projectId = window.location.pathname.match(/\/project\/(\d+)/)?.[1];
+    if (!projectId) {
+        alert('No active project found. Please create a project first.');
+        return;
+    }
+    
+    fetch('/load-sample-data', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({project_id: projectId})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Successfully loaded ${data.articles_count} sample articles for demonstration`);
+            location.reload();
+        } else {
+            alert('Failed to load sample data: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Error loading sample data: ' + error.message);
+    });
 }
 </script>
 

@@ -5,6 +5,7 @@ Flask API endpoints for the modern dual-provider screening system.
 
 import logging
 import json
+import os
 import asyncio
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -22,6 +23,7 @@ from app.services.screening import (
     WorkflowProgress,
     ScreeningWorkflowFactory
 )
+from app.services.screening.dual_llm_screener import ModelConfig
 # from app.services.utils.cost_tracker import cost_tracker  # Temporarily disabled
 from app.services.utils.error_handler import handle_file_parsing_error
 from app.services.utils.exceptions import ValidationError
@@ -298,26 +300,30 @@ def process_article(article_id):
     criteria_dict = project.config['criteria']
     criteria = ScreeningCriteria(**criteria_dict)
     
-    # Get model configuration from project config
+    # Get model configuration from session or project config
+    session_config = session.get('model_config', {})
     llm_config = project.config.get('llmConfig', {})
+    
+    model1_config = session_config.get('model1', {})
+    model2_config = session_config.get('model2', {})
     
     from app.services.screening.dual_llm_screener import ModelConfig, DualModelConfig
     
     # Create OpenAI configuration
     openai_config = ModelConfig(
-        provider='openai',
-        model_name='gpt-4o',
-        temperature=llm_config.get('openaiTemperature', 0.1),
-        seed=llm_config.get('openaiSeed'),
+        provider=model1_config.get('provider', 'openai'),
+        model_name=model1_config.get('model_name', 'gpt-4o'),
+        temperature=float(model1_config.get('temperature', llm_config.get('openaiTemperature', 0.1))),
+        seed=int(model1_config['seed']) if model1_config.get('seed') else llm_config.get('openaiSeed'),
         max_tokens=4000
     )
     
-    # Create Anthropic configuration
+    # Create Anthropic configuration  
     anthropic_config = ModelConfig(
-        provider='anthropic',
-        model_name='claude-3-5-sonnet-20241022',
-        temperature=llm_config.get('anthropicTemperature', 0.1),
-        seed=llm_config.get('anthropicSeed'),
+        provider=model2_config.get('provider', 'anthropic'),
+        model_name=model2_config.get('model_name', 'claude-3-5-sonnet-20241022'),
+        temperature=float(model2_config.get('temperature', llm_config.get('anthropicTemperature', 0.1))),
+        seed=int(model2_config['seed']) if model2_config.get('seed') else llm_config.get('anthropicSeed'),
         max_tokens=4000
     )
     
@@ -619,6 +625,188 @@ def get_model_config(project_id):
             'secondaryProvider': llm_config.get('secondaryProvider', 'anthropic')
         }
     })
+
+@modern_screening_bp.route('/config/models', methods=['POST'])
+def save_model_config():
+    """Save model configuration for dual-LLM screening."""
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'success': False, 'error': 'No configuration data provided'}), 400
+    
+    # Validate model configurations
+    try:
+        model1_config = ModelConfig(
+            provider=data['model1']['provider'],
+            model_name=data['model1']['model_name'],
+            temperature=float(data['model1']['temperature']),
+            seed=int(data['model1']['seed']) if data['model1']['seed'] else None,
+            max_tokens=4000
+        )
+        
+        model2_config = ModelConfig(
+            provider=data['model2']['provider'],
+            model_name=data['model2']['model_name'],
+            temperature=float(data['model2']['temperature']),
+            seed=int(data['model2']['seed']) if data['model2']['seed'] else None,
+            max_tokens=4000
+        )
+        
+        session['model_config'] = {
+            'model1': data['model1'],
+            'model2': data['model2']
+        }
+        
+        return jsonify({
+            'success': True,
+            'message': 'Model configuration saved successfully',
+            'status': 'Configuration Updated'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Invalid configuration: {str(e)}',
+            'status': 'Configuration Error'
+        }), 400
+
+@modern_screening_bp.route('/config/models', methods=['GET'])
+def get_dual_model_config():
+    """Get current dual model configuration."""
+    
+    # Return session config or default configuration
+    session_config = session.get('model_config', {})
+    
+    default_config = {
+        'model1': {
+            'provider': 'openai',
+            'model_name': 'gpt-4o',
+            'temperature': 0.1,
+            'seed': None
+        },
+        'model2': {
+            'provider': 'anthropic', 
+            'model_name': 'claude-3-5-sonnet-20241022',
+            'temperature': 0.1,
+            'seed': None
+        }
+    }
+    
+    config = {
+        'model1': {**default_config['model1'], **session_config.get('model1', {})},
+        'model2': {**default_config['model2'], **session_config.get('model2', {})}
+    }
+    
+    return jsonify({
+        'success': True,
+        'config': config
+    })
+
+@modern_screening_bp.route('/config/test-connection', methods=['POST'])
+def test_model_connection():
+    """Test connection to LLM provider."""
+    data = request.get_json()
+    
+    if not data or 'config' not in data:
+        return jsonify({'success': False, 'error': 'No configuration provided'}), 400
+    
+    config_data = data['config']
+    
+    try:
+        model_config = ModelConfig(
+            provider=config_data['provider'],
+            model_name=config_data['model_name'],
+            temperature=float(config_data['temperature']),
+            seed=int(config_data['seed']) if config_data['seed'] else None
+        )
+        
+        if config_data['provider'] == 'openai':
+            api_key = config_data.get('api_key') or current_app.config.get('OPENAI_API_KEY')
+            if not api_key:
+                return jsonify({'success': False, 'status': 'Missing API Key', 'message': 'OpenAI API key required'})
+            
+            from app.services.screening.dual_llm_screener import OpenAIProvider
+            provider = OpenAIProvider(api_key, model_config)
+            return jsonify({'success': True, 'status': 'Connected', 'message': 'OpenAI connection successful'})
+            
+        elif config_data['provider'] == 'anthropic':
+            api_key = config_data.get('api_key') or current_app.config.get('ANTHROPIC_API_KEY')
+            if not api_key:
+                return jsonify({'success': False, 'status': 'Missing API Key', 'message': 'Anthropic API key required'})
+            
+            from app.services.screening.dual_llm_screener import AnthropicProvider
+            provider = AnthropicProvider(api_key, model_config)
+            return jsonify({'success': True, 'status': 'Connected', 'message': 'Anthropic connection successful'})
+        
+        else:
+            return jsonify({'success': True, 'status': 'Local Model', 'message': f'{config_data["provider"]} configured'})
+            
+    except Exception as e:
+        return jsonify({
+            'success': False, 
+            'status': 'Connection Failed', 
+            'message': f'Connection test failed: {str(e)}'
+        })
+
+@modern_screening_bp.route('/config/templates/save', methods=['POST'])
+def save_template():
+    """Save current PICO-TT configuration as a template."""
+    data = request.get_json()
+    
+    if not data or 'name' not in data:
+        return jsonify({'success': False, 'error': 'Template name required'}), 400
+    
+    template_name = data['name']
+    template_data = {
+        'name': template_name,
+        'research_question': data.get('research_question', ''),
+        'population': data.get('population', ''),
+        'intervention': data.get('intervention', ''),
+        'comparison': data.get('comparison', ''),
+        'outcomes': data.get('outcomes', ''),
+        'time_frame': data.get('time_frame', ''),
+        'study_types': data.get('study_types', ''),
+        'inclusion_criteria': data.get('inclusion_criteria', []),
+        'exclusion_criteria': data.get('exclusion_criteria', []),
+        'created_at': datetime.now().isoformat()
+    }
+    
+    template_file = os.path.join(current_app.config['CONFIG_TEMPLATES_DIR'], f"{template_name}.json")
+    try:
+        with open(template_file, 'w') as f:
+            json.dump(template_data, f, indent=2)
+        return jsonify({'success': True, 'message': f'Template "{template_name}" saved successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Failed to save template: {str(e)}'}), 500
+
+@modern_screening_bp.route('/config/templates/load/<template_name>', methods=['GET'])
+def load_template(template_name):
+    """Load a saved template."""
+    template_file = os.path.join(current_app.config['CONFIG_TEMPLATES_DIR'], f"{template_name}.json")
+    
+    if not os.path.exists(template_file):
+        return jsonify({'success': False, 'error': 'Template not found'}), 404
+    
+    try:
+        with open(template_file, 'r') as f:
+            template_data = json.load(f)
+        return jsonify({'success': True, 'template': template_data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Failed to load template: {str(e)}'}), 500
+
+@modern_screening_bp.route('/config/templates/list', methods=['GET'])
+def list_templates():
+    """List all available templates."""
+    templates_dir = current_app.config['CONFIG_TEMPLATES_DIR']
+    templates = []
+    
+    if os.path.exists(templates_dir):
+        for filename in os.listdir(templates_dir):
+            if filename.endswith('.json'):
+                template_name = filename[:-5]  # Remove .json extension
+                templates.append(template_name)
+    
+    return jsonify({'success': True, 'templates': templates})
 
 # ============================================================================
 # ERROR HANDLERS

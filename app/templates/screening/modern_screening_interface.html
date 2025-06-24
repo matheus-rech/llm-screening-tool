@@ -257,30 +257,34 @@
                         </div>
                     </div>
 
-                    <!-- Abstract -->
-                    <div class="p-4 border-b border-gray-600">
-                        <h4 class="font-semibold mb-2">Abstract</h4>
-                        <p class="text-sm text-gray-300 mb-4" x-text="currentArticle?.abstract"></p>
-                    </div>
-
-                    <!-- PICO-TT Scoring -->
-                    <div class="p-4 border-b border-gray-600" x-show="currentArticle?.ai_analysis">
-                        <h4 class="font-semibold mb-2">PICO-TT Scoring</h4>
-                        <div class="mb-4">
-                            <template x-for="score in getPicoScores(currentArticle)" :key="score.label">
-                                <div class="pico-score">
-                                    <span class="pico-label" x-text="score.label"></span>
-                                    <div class="pico-bar-container">
-                                        <div class="pico-bar" :style="`width: ${score.value}%; background-color: ${picoColor(score.value)}`" x-text="`${score.value}%`"></div>
-                                    </div>
-                                </div>
-                            </template>
+                    <!-- Abstract - Enhanced Display -->
+                    <div class="p-6 border-b border-gray-600">
+                        <h3 class="text-lg font-bold mb-4 text-blue-400">Abstract</h3>
+                        <div class="bg-gray-800 p-4 rounded-lg border-l-4 border-blue-500">
+                            <p class="text-base text-gray-100 leading-relaxed" x-text="currentArticle?.abstract"></p>
                         </div>
                     </div>
 
-                    <!-- AI Analysis Results -->
+                    <!-- PICO-TT Scoring - Collapsible -->
                     <div class="p-4 border-b border-gray-600" x-show="currentArticle?.ai_analysis">
-                        <h4 class="font-semibold mb-2">AI Analysis (JSON Schema Output)</h4>
+                        <details class="mb-4">
+                            <summary class="cursor-pointer text-sm font-semibold text-gray-400 hover:text-gray-300 mb-2">PICO-TT Extraction Details</summary>
+                            <div class="mt-3">
+                                <template x-for="score in getPicoScores(currentArticle)" :key="score.label">
+                                    <div class="pico-score">
+                                        <span class="pico-label" x-text="score.label"></span>
+                                        <div class="pico-bar-container">
+                                            <div class="pico-bar" :style="`width: ${score.value}%; background-color: ${picoColor(score.value)}`" x-text="`${score.value}%`"></div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </details>
+                    </div>
+
+                    <!-- AI Analysis Results - Enhanced Display -->
+                    <div class="p-6 border-b border-gray-600" x-show="currentArticle?.ai_analysis">
+                        <h3 class="text-lg font-bold mb-4 text-green-400">AI Classification Results</h3>
                         
                         <!-- Provider Comparison -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">

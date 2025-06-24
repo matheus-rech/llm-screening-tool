@@ -43,6 +43,11 @@ class Project(db.Model):
     def __repr__(self):
         return f'<Project {self.name}>'
     
+    @property
+    def has_screening_results(self):
+        """Check if project has articles with decision_reasoning."""
+        return any(article.decision_reasoning is not None for article in self.articles)
+    
     def to_dict(self):
         """Convert project to dictionary."""
         return {

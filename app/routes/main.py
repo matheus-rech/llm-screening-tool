@@ -30,10 +30,15 @@ os.makedirs('uploads', exist_ok=True)
 os.makedirs('results', exist_ok=True)
 os.makedirs('config_templates', exist_ok=True)
 
+def configure_template_directory(app):
+    """Configure the CONFIG_TEMPLATES_DIR for the Flask app."""
+    app.config['CONFIG_TEMPLATES_DIR'] = os.path.abspath('config_templates')
+
 @main_bp.route('/')
 def dashboard():
     """Main dashboard showing all projects."""
-    projects = Project.query.order_by(Project.updated_at.desc()).all()
+    from sqlalchemy.orm import joinedload
+    projects = Project.query.options(joinedload(Project.articles)).order_by(Project.updated_at.desc()).all()
     return render_template('dashboard.html', projects=projects)
 
 @main_bp.route('/create_project', methods=['GET', 'POST'])
@@ -299,3 +304,265 @@ def uploaded_file(filename):
 def result_file(filename):
     """Serve result files."""
     return send_from_directory('results', filename)
+
+@main_bp.route('/load-sample-data', methods=['POST'])
+def load_sample_data():
+    """Load sample data for demonstration purposes."""
+    try:
+        data = request.get_json()
+        project_id = data.get('project_id')
+        
+        if not project_id:
+            logger.error("No project ID provided")
+            return jsonify({'success': False, 'error': 'Project ID required'}), 400
+        
+        project = Project.query.get_or_404(project_id)
+        logger.info(f"Loading sample data for project: {project.name} (ID: {project_id})")
+        
+        existing_count = Article.query.filter_by(project_id=project_id).count()
+        Article.query.filter_by(project_id=project_id).delete()
+        db.session.commit()
+        logger.info(f"Deleted {existing_count} existing articles")
+        
+        sample_file_path = os.path.join(os.path.dirname(__file__), '..', '..', 'test_data', 'sample_diabetes_studies.ris')
+        logger.info(f"Sample file path: {sample_file_path}")
+        
+        if not os.path.exists(sample_file_path):
+            logger.error(f"Sample data file not found at: {sample_file_path}")
+            return jsonify({'success': False, 'error': 'Sample data file not found'}), 404
+        
+        # Read file content and parse the file
+        with open(sample_file_path, 'r', encoding='utf-8') as f:
+            file_content = f.read()
+        
+        logger.info(f"File content length: {len(file_content)}")
+        
+        studies = load_studies(file_content, 'sample_diabetes_studies.ris')
+        logger.info(f"Number of studies parsed: {len(studies)}")
+        
+        if not studies:
+            logger.error("No studies were parsed from the sample file")
+            return jsonify({'success': False, 'error': 'No studies could be parsed from sample file'}), 500
+        
+        # Create articles in database with mock screening results for demonstration
+        articles_count = 0
+        mock_decisions = ['INCLUDE', 'EXCLUDE', 'INCLUDE', 'EXCLUDE', 'INCLUDE']
+        
+        logger.info(f"Starting to create {len(studies)} articles with mock screening results")
+        
+        for i, study in enumerate(studies):
+            try:
+                # Convert authors list to string if it's a list
+                authors = study.get('authors', '')
+                if isinstance(authors, list):
+                    authors = ', '.join(authors)
+                
+                mock_decision = mock_decisions[i % len(mock_decisions)]
+                mock_screening_record = {
+                    'article_id': str(i + 1),
+                    'project_id': str(project_id),
+                    'timestamp': datetime.utcnow().isoformat(),
+                    'openai_result': {
+                        'screening_decision': {'final_decision': mock_decision},
+                        'confidence_score': 0.85,
+                        'llm_provider': 'openai',
+                        'model_name': 'gpt-4o'
+                    },
+                    'anthropic_result': {
+                        'screening_decision': {'final_decision': mock_decision},
+                        'confidence_score': 0.82,
+                        'llm_provider': 'anthropic', 
+                        'model_name': 'claude-3-5-sonnet-20241022'
+                    },
+                    'agreement_analysis': {'decision_agreement': True},
+                    'human_review_triggers': {'should_review': False},
+                    'final_decision': mock_decision,
+                    'requires_human_review': False
+                }
+                
+                article = Article(
+                    project_id=project_id,
+                    title=study.get('title', ''),
+                    authors=authors,
+                    journal=study.get('journal_name', ''),
+                    year=study.get('year'),
+                    abstract=study.get('abstract', ''),
+                    doi=study.get('doi', ''),
+                    pmid=study.get('pmid', ''),
+                    original_data=study,
+                    status='included' if mock_decision == 'INCLUDE' else 'excluded',
+                    decision_reasoning=mock_screening_record
+                )
+                
+                db.session.add(article)
+                articles_count += 1
+                logger.info(f"Created article {i+1}: {study.get('title', '')[:50]}... (Status: {article.status})")
+                
+            except Exception as e:
+                logger.error(f"Error creating article {i+1}: {str(e)}")
+                continue
+        
+        # Update project
+        project.updated_at = datetime.utcnow()
+        project.total_articles = articles_count
+        
+        try:
+            db.session.commit()
+            logger.info(f"Successfully committed {articles_count} articles to database")
+        except Exception as e:
+            logger.error(f"Error committing to database: {str(e)}")
+            db.session.rollback()
+            return jsonify({'success': False, 'error': f'Database commit failed: {str(e)}'}), 500
+        
+        return jsonify({
+            'success': True,
+            'articles_count': articles_count,
+            'message': f'Successfully loaded {articles_count} sample articles with mock screening results'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error loading sample data: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@main_bp.route('/api/model-config', methods=['GET', 'POST'])
+def model_configuration():
+    """Get or update model configuration."""
+    if request.method == 'GET':
+        return jsonify({
+            'success': True,
+            'config': {
+                'temperature': 0.1,
+                'seed': None,
+                'openai_model': 'gpt-4o',
+                'anthropic_model': 'claude-3-5-sonnet-20241022'
+            }
+        })
+    
+    elif request.method == 'POST':
+        try:
+            config = request.get_json()
+            
+            if not config:
+                return jsonify({'success': False, 'error': 'No configuration data provided'}), 400
+            
+            temperature = config.get('temperature')
+            if temperature is not None:
+                try:
+                    temperature = float(temperature)
+                    if not (0.0 <= temperature <= 2.0):
+                        return jsonify({'success': False, 'error': 'Temperature must be between 0.0 and 2.0'}), 400
+                except (ValueError, TypeError):
+                    return jsonify({'success': False, 'error': 'Temperature must be a valid number'}), 400
+            
+            seed = config.get('seed')
+            if seed is not None and seed != '':
+                try:
+                    seed = int(seed)
+                except (ValueError, TypeError):
+                    return jsonify({'success': False, 'error': 'Seed must be a valid integer or null'}), 400
+            else:
+                seed = None
+            
+            openai_model = config.get('openai_model', 'gpt-4o')
+            anthropic_model = config.get('anthropic_model', 'claude-3-5-sonnet-20241022')
+            
+            if not isinstance(openai_model, str) or not openai_model.strip():
+                return jsonify({'success': False, 'error': 'OpenAI model must be a non-empty string'}), 400
+            
+            if not isinstance(anthropic_model, str) or not anthropic_model.strip():
+                return jsonify({'success': False, 'error': 'Anthropic model must be a non-empty string'}), 400
+            
+            from flask import session
+            session['model_config'] = {
+                'temperature': temperature,
+                'seed': seed,
+                'openai_model': openai_model.strip(),
+                'anthropic_model': anthropic_model.strip()
+            }
+            
+            return jsonify({
+                'success': True,
+                'message': 'Model configuration updated successfully',
+                'config': session['model_config']
+            })
+            
+        except Exception as e:
+            logger.error(f"Error updating model configuration: {str(e)}")
+            return jsonify({'success': False, 'error': f'Configuration update failed: {str(e)}'}), 500
+
+@main_bp.route('/api/model-config/project/<int:project_id>', methods=['GET', 'POST'])
+def project_model_configuration(project_id):
+    """Get or update model configuration for a specific project."""
+    project = Project.query.get_or_404(project_id)
+    
+    if request.method == 'GET':
+        from flask import session
+        project_config_key = f'model_config_project_{project_id}'
+        config = session.get(project_config_key, {
+            'temperature': 0.1,
+            'seed': None,
+            'openai_model': 'gpt-4o',
+            'anthropic_model': 'claude-3-5-sonnet-20241022'
+        })
+        
+        return jsonify({
+            'success': True,
+            'project_id': project_id,
+            'project_name': project.name,
+            'config': config
+        })
+    
+    elif request.method == 'POST':
+        try:
+            config = request.get_json()
+            
+            if not config:
+                return jsonify({'success': False, 'error': 'No configuration data provided'}), 400
+            
+            temperature = config.get('temperature', 0.1)
+            if temperature is not None:
+                try:
+                    temperature = float(temperature)
+                    if not (0.0 <= temperature <= 2.0):
+                        return jsonify({'success': False, 'error': 'Temperature must be between 0.0 and 2.0'}), 400
+                except (ValueError, TypeError):
+                    return jsonify({'success': False, 'error': 'Temperature must be a valid number'}), 400
+            
+            seed = config.get('seed')
+            if seed is not None and seed != '':
+                try:
+                    seed = int(seed)
+                except (ValueError, TypeError):
+                    return jsonify({'success': False, 'error': 'Seed must be a valid integer or null'}), 400
+            else:
+                seed = None
+            
+            openai_model = config.get('openai_model', 'gpt-4o')
+            anthropic_model = config.get('anthropic_model', 'claude-3-5-sonnet-20241022')
+            
+            if not isinstance(openai_model, str) or not openai_model.strip():
+                return jsonify({'success': False, 'error': 'OpenAI model must be a non-empty string'}), 400
+            
+            if not isinstance(anthropic_model, str) or not anthropic_model.strip():
+                return jsonify({'success': False, 'error': 'Anthropic model must be a non-empty string'}), 400
+            
+            from flask import session
+            project_config_key = f'model_config_project_{project_id}'
+            session[project_config_key] = {
+                'temperature': temperature,
+                'seed': seed,
+                'openai_model': openai_model.strip(),
+                'anthropic_model': anthropic_model.strip()
+            }
+            
+            return jsonify({
+                'success': True,
+                'message': f'Model configuration updated for project "{project.name}"',
+                'project_id': project_id,
+                'config': session[project_config_key]
+            })
+            
+        except Exception as e:
+            logger.error(f"Error updating project model configuration: {str(e)}")
+            return jsonify({'success': False, 'error': f'Configuration update failed: {str(e)}'}), 500
