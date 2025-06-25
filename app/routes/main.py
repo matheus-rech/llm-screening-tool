@@ -85,7 +85,10 @@ def project_detail(project_id):
 
 @main_bp.route('/project/<int:project_id>/upload', methods=['POST'])
 def upload_file(project_id):
-    """Upload and parse reference files."""
+    """Upload and parse reference files with database source tracking."""
+    from app.models.screening_models import PublicationSource
+    from app.services.utils.file_parser import load_studies_with_source_tracking
+    
     project = Project.query.get_or_404(project_id)
     
     if 'file' not in request.files:
@@ -95,16 +98,25 @@ def upload_file(project_id):
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
     
+    database_source = request.form.get('database_source', 'Auto-detect')
+    
     if file:
         filename = secure_filename(file.filename)
         filepath = os.path.join('uploads', filename)
         file.save(filepath)
         
         try:
-            # Read file content and parse the file
+            # Read file content and parse with source tracking
             with open(filepath, 'r', encoding='utf-8') as f:
                 file_content = f.read()
-            studies = load_studies(file_content, filename)
+            
+            studies, detected_source = load_studies_with_source_tracking(
+                file_content, 
+                filename, 
+                entrez_email=os.getenv('ENTREZ_EMAIL', '')
+            )
+            
+            final_source = detected_source if database_source == 'Auto-detect' else database_source
             
             # Create articles in database
             articles_created = 0
@@ -127,6 +139,15 @@ def upload_file(project_id):
                     status='pending'
                 )
                 db.session.add(article)
+                db.session.flush()  # Get article ID
+                
+                pub_source = PublicationSource(
+                    article_id=article.id,
+                    source_database=final_source,
+                    source_id=study.get('pmid') or study.get('doi') or '',
+                    import_date=datetime.utcnow()
+                )
+                db.session.add(pub_source)
                 articles_created += 1
             
             # Update project
@@ -139,8 +160,9 @@ def upload_file(project_id):
             
             return jsonify({
                 'success': True,
-                'message': f'Successfully uploaded and parsed {articles_created} articles',
-                'articles_count': articles_created
+                'message': f'Successfully uploaded and parsed {articles_created} articles from {final_source}',
+                'articles_count': articles_created,
+                'database_source': final_source
             })
             
         except Exception as e:

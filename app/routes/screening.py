@@ -814,6 +814,7 @@ def get_project_statistics(project_id):
     try:
         from app.models.project import Project
         from app.models.article import Article
+        from app.models.screening_models import PublicationSource
         
         project = Project.query.get_or_404(project_id)
         
@@ -827,6 +828,20 @@ def get_project_statistics(project_id):
         pending_articles = len([a for a in articles if a.status == 'pending'])
         duplicate_articles = 0  # TODO: Implement duplicate detection
         
+        source_breakdown = {}
+        for article in articles:
+            pub_sources = PublicationSource.query.filter_by(article_id=article.id).all()
+            if pub_sources:
+                for source in pub_sources:
+                    db_name = source.source_database
+                    if db_name not in source_breakdown:
+                        source_breakdown[db_name] = 0
+                    source_breakdown[db_name] += 1
+            else:
+                if 'Unknown' not in source_breakdown:
+                    source_breakdown['Unknown'] = 0
+                source_breakdown['Unknown'] += 1
+        
         return jsonify({
             'success': True,
             'total_articles': total_articles,
@@ -835,6 +850,7 @@ def get_project_statistics(project_id):
             'excluded_articles': excluded_articles,
             'pending_articles': pending_articles,
             'duplicate_articles': duplicate_articles,
+            'database_sources': source_breakdown,
             'project_name': project.name,
             'project_id': project_id
         })
