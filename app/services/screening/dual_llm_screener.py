@@ -145,8 +145,7 @@ class ComprehensiveScreeningResult(BaseModel):
 # SCREENING CRITERIA CONFIGURATION
 # ============================================================================
 
-@dataclass
-class ScreeningCriteria:
+class ScreeningCriteria(BaseModel):
     """Configuration for screening criteria."""
     research_question: str
     
@@ -168,6 +167,11 @@ class ScreeningCriteria:
     minimum_relevance_score: float = 0.3
     minimum_confidence_score: float = 0.7
     require_human_review_threshold: float = 0.5
+    
+    temperature: float = Field(default=0.1, ge=0.0, le=2.0, description="Temperature for LLM generation (0.0-2.0)")
+    seed: Optional[int] = Field(default=None, description="Seed for reproducible results")
+    openai_model: str = Field(default="gpt-4o", description="OpenAI model to use")
+    anthropic_model: str = Field(default="claude-3-5-sonnet-20241022", description="Anthropic model to use")
 
 # ============================================================================
 # LLM PROVIDER INTERFACES
@@ -194,7 +198,7 @@ class OpenAIProvider:
         
         try:
             request_params = {
-                "model": self.config.model_name,
+                "model": criteria.openai_model,
                 "messages": [
                     {
                         "role": "system", 
@@ -206,14 +210,14 @@ class OpenAIProvider:
                     }
                 ],
                 "response_format": ComprehensiveScreeningResult,
-                "temperature": self.config.temperature
+                "temperature": criteria.temperature
             }
             
             if self.config.max_tokens is not None:
                 request_params["max_tokens"] = self.config.max_tokens
             
-            if self.config.seed is not None:
-                request_params["seed"] = self.config.seed
+            if criteria.seed is not None:
+                request_params["seed"] = criteria.seed
             
             response = self.client.beta.chat.completions.parse(**request_params)
             
@@ -230,7 +234,7 @@ class OpenAIProvider:
             
             # Add provider metadata
             result.llm_provider = self.provider_name
-            result.model_name = self.config.model_name
+            result.model_name = criteria.openai_model
             
             return result
             
@@ -295,9 +299,9 @@ class AnthropicProvider:
         
         try:
             request_params = {
-                "model": self.config.model_name,
+                "model": criteria.anthropic_model,
                 "max_tokens": self.config.max_tokens or 4000,
-                "temperature": self.config.temperature,
+                "temperature": criteria.temperature,
                 "system": "You are an expert systematic review researcher. Analyze the provided abstract against the given criteria and provide a comprehensive structured assessment. Respond ONLY with valid JSON matching the required schema.",
                 "messages": [
                     {
@@ -325,7 +329,7 @@ class AnthropicProvider:
             
             # Add provider metadata
             result.llm_provider = self.provider_name
-            result.model_name = self.config.model_name
+            result.model_name = criteria.anthropic_model
             
             return result
             

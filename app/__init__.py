@@ -4,6 +4,7 @@ Creates and configures the Flask application instance.
 """
 
 import os
+import logging
 from flask import Flask
 from flask_migrate import Migrate
 
@@ -33,6 +34,11 @@ def create_app(config_name=None):
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     
+    # Configure logging for debugging
+    if config_name == 'development':
+        logging.basicConfig(level=logging.INFO)
+        app.logger.setLevel(logging.INFO)
+    
     # Initialize extensions with app
     db.init_app(app)
     migrate.init_app(app, db)
@@ -41,8 +47,11 @@ def create_app(config_name=None):
     from app.models import screening_models
     
     # Register blueprints - MVP ONLY CORE FUNCTIONALITY
-    from app.routes.main import main_bp
+    from app.routes.main import main_bp, configure_template_directory
     from app.routes.screening import modern_screening_bp
+    
+    # Configure template directory
+    configure_template_directory(app)
     
     app.register_blueprint(main_bp)
     app.register_blueprint(modern_screening_bp)
