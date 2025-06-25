@@ -578,8 +578,8 @@ class DualProviderScreeningOrchestrator:
             self.openai_provider = OpenAIProvider(openai_api_key, config.openai_config)
             self.anthropic_provider = AnthropicProvider(anthropic_api_key, config.anthropic_config)
         else:
-            default_openai_config = ModelConfig(provider="openai", model_name="gpt-4.1")
-            default_anthropic_config = ModelConfig(provider="anthropic", model_name="claude-3-7-sonnet-20250219")
+            default_openai_config = ModelConfig(provider="openai", model_name="o3")
+            default_anthropic_config = ModelConfig(provider="anthropic", model_name="claude-3-5-sonnet-20241022")
             self.openai_provider = OpenAIProvider(openai_api_key, default_openai_config)
             self.anthropic_provider = AnthropicProvider(anthropic_api_key, default_anthropic_config)
         

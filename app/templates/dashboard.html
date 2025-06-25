@@ -575,11 +575,11 @@
                         <div class="p-4">
                             <div class="flex justify-center items-center h-40 border-2 border-dashed border-gray-600 rounded-md text-gray-500">
                                 <div class="text-center">
+                                    <input type="file" id="file-upload" accept=".xml,.ris,.scrn,.bib,.csv,.txt" multiple style="display: none;" onchange="handleFileUpload(this)" />
                                     <p class="mb-3">Drag & drop XML, RIS, SCRN files here or <span class="text-blue-400 hover:underline cursor-pointer" onclick="document.getElementById('file-upload').click()">browse</span>.</p>
                                     <button class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md text-white font-semibold shadow-md" onclick="loadSampleData()">Load Sample Data</button>
                                 </div>
                             </div>
-                            <input type="file" id="file-upload" accept=".ris,.bib,.xml,.csv" style="display: none;" onchange="handleFileUpload(this)">
                             
                             <!-- Database Source Selection (initially hidden) -->
                             <div id="database-source-selection" class="mt-4 p-4 bg-gray-800 rounded-md" style="display: none;">
@@ -867,7 +867,7 @@ function llmScreeningTool() {
         },
         model2: { 
             provider: 'openai',
-            model_name: 'gpt-4o',
+            model_name: 'o3',
             api_key: '',
             api_endpoint: '',
             temperature: 0.1,
@@ -1006,17 +1006,33 @@ function llmScreeningTool() {
         getAvailableModels(provider) {
             const modelOptions = {
                 'openai': [
+<<<<<<< HEAD
                     { value: 'gpt-4.1', label: 'GPT-4.1' },
                     { value: 'o3', label: 'o3 (Reasoning)' },
                     { value: 'o4-mini', label: 'o4-mini (Fast Reasoning)' },
+||||||| aa8a667
+=======
+                    { value: 'o3-mini', label: 'o3-mini (Latest)' },
+                    { value: 'o3', label: 'o3 (Latest)' },
+>>>>>>> origin/Research
                     { value: 'gpt-4o', label: 'GPT-4o' },
                     { value: 'gpt-4o-mini', label: 'GPT-4o Mini' }
                 ],
                 'anthropic': [
+<<<<<<< HEAD
                     { value: 'claude-3-7-sonnet-20250219', label: 'Claude Sonnet 3.7' },
                     { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
                     { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
                     { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' }
+||||||| aa8a667
+                    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+                    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
+                    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' }
+=======
+                    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Latest)' },
+                    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
+                    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' }
+>>>>>>> origin/Research
                 ],
                 'ollama': [
                     { value: 'llama3.1:8b', label: 'Llama 3.1 8B' },
