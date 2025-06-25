@@ -862,7 +862,7 @@ console.log('File upload state initialized successfully');
 
 function llmScreeningTool() {
     return {
-        activeTab: {% if project %}'screening'{% else %}'dashboard'{% endif %}, // DEBUG: project={{ project.name if project else 'None' }}
+        activeTab: {% if project %}'screening'{% else %}'dashboard'{% endif %},
         
         // Initialize tab correctly on page load
         init() {
@@ -878,13 +878,22 @@ function llmScreeningTool() {
                 {% if project %}
                 this.activeTab = 'screening';
                 Alpine.store('activeTab', 'screening');
-                console.log('Project detected, setting activeTab to screening:', '{{ project.name if project else "None" }}');
+                console.log('Project detected, setting activeTab to screening:', {% if project %}'{{ project.name|e }}'{% else %}'None'{% endif %});
                 {% else %}
                 this.activeTab = 'dashboard';
                 Alpine.store('activeTab', 'dashboard');
                 console.log('No project detected, setting activeTab to dashboard');
                 {% endif %}
             }
+            
+            // Initialize system logging
+            this.addLog('System initialized. Ready for screening.', 'text-green-400');
+            setInterval(() => {
+                const now = new Date();
+                if (now.getSeconds() % 15 === 0) {
+                     this.addLog('Auto-saving configuration...', 'text-gray-400');
+                }
+            }, 1000);
         },
         cachedPrismaStats: null,
         model1: { 
@@ -969,16 +978,6 @@ function llmScreeningTool() {
         ],
         prismaData: {},
 
-        init() {
-            this.addLog('System initialized. Ready for screening.', 'text-green-400');
-            setInterval(() => {
-                const now = new Date();
-                if (now.getSeconds() % 15 === 0) {
-                     this.addLog('Auto-saving configuration...', 'text-gray-400');
-                }
-            }, 1000);
-        },
-
         addLog(message, colorClass = 'text-white') {
             const timestamp = new Date().toISOString().substr(11, 8);
             this.logs.unshift({ id: this.logId++, time: timestamp, message: message, color: colorClass });
@@ -1037,33 +1036,15 @@ function llmScreeningTool() {
         getAvailableModels(provider) {
             const modelOptions = {
                 'openai': [
-<<<<<<< HEAD
-                    { value: 'gpt-4.1', label: 'GPT-4.1' },
-                    { value: 'o3', label: 'o3 (Reasoning)' },
-                    { value: 'o4-mini', label: 'o4-mini (Fast Reasoning)' },
-||||||| aa8a667
-=======
-                    { value: 'o3-mini', label: 'o3-mini (Latest)' },
                     { value: 'o3', label: 'o3 (Latest)' },
->>>>>>> origin/Research
+                    { value: 'o3-mini', label: 'o3-mini (Latest)' },
                     { value: 'gpt-4o', label: 'GPT-4o' },
                     { value: 'gpt-4o-mini', label: 'GPT-4o Mini' }
                 ],
                 'anthropic': [
-<<<<<<< HEAD
-                    { value: 'claude-3-7-sonnet-20250219', label: 'Claude Sonnet 3.7' },
-                    { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-                    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-                    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' }
-||||||| aa8a667
-                    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-                    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
-                    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' }
-=======
                     { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Latest)' },
                     { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku' },
                     { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' }
->>>>>>> origin/Research
                 ],
                 'ollama': [
                     { value: 'llama3.1:8b', label: 'Llama 3.1 8B' },
