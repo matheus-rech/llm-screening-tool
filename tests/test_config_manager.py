@@ -2,11 +2,11 @@ import pytest
 import json
 import tempfile
 from pathlib import Path
-from config_manager import (
+from app.services.utils.config_manager import (
     ConfigurationManager, ProjectConfiguration, PICOCriteria, 
     APIConfiguration, ProcessingConfiguration
 )
-from exceptions import ConfigurationError, ValidationError
+from app.services.utils.exceptions import ConfigurationError, ValidationError
 
 class TestConfigurationManager:
     """Test enhanced configuration management."""

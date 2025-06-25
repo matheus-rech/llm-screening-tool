@@ -1,6 +1,7 @@
 import pytest
 import json
-from app import Project, Article, db
+from app.models.screening_models import Project, Article
+from app import create_app, db
 
 class TestRoutes:
     """Test Flask application routes."""
