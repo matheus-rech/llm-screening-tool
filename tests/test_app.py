@@ -22,6 +22,7 @@ class TestRoutes:
         """Test actual project creation."""
         project_data = {
             'name': 'Test Project',
+            'description': 'Test Description',
             'population': 'Adults',
             'intervention': 'Drug A',
             'comparison': 'Placebo',
@@ -36,7 +37,8 @@ class TestRoutes:
         # Verify project was created
         project = Project.query.filter_by(name='Test Project').first()
         assert project is not None
-        assert project.population == 'Adults'
+        assert project.config is not None
+        assert project.config.get('pico', {}).get('population') == 'Adults'
 
 class TestModels:
     """Test database models."""
@@ -46,31 +48,45 @@ class TestModels:
         with client.application.app_context():
             project = Project(
                 name="Test Project",
-                population="Test Population",
-                intervention="Test Intervention",
-                comparison="Test Comparison",
-                outcomes="Test Outcomes",
-                time_frame="Test Time",
-                study_types="Test Types"
+                description="Test Description",
+                config={
+                    'pico': {
+                        'population': 'Test Population',
+                        'intervention': 'Test Intervention',
+                        'comparison': 'Test Comparison',
+                        'outcomes': 'Test Outcomes',
+                        'time_frame': 'Test Time',
+                        'study_types': 'Test Types'
+                    }
+                }
             )
             db.session.add(project)
             db.session.commit()
             
             assert project.id is not None
             assert project.name == "Test Project"
+            assert project.config['pico']['population'] == "Test Population"
     
-    def test_article_model(self, client, sample_project):
+    def test_article_model(self, app):
         """Test Article model creation and relationships."""
-        with client.application.app_context():
+        with app.app_context():
+            project = Project(
+                name="Test Project for Article",
+                description="Test Description",
+                config={'pico': {'population': 'Test Population'}}
+            )
+            db.session.add(project)
+            db.session.commit()
+            
             article = Article(
                 title="Test Article",
                 abstract="Test Abstract",
-                project_id=sample_project.id,
+                project_id=project.id,
                 status="pending"
             )
             db.session.add(article)
             db.session.commit()
             
             assert article.id is not None
-            assert article.project_id == sample_project.id
+            assert article.project_id == project.id
             assert article.status == "pending"

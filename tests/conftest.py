@@ -59,12 +59,17 @@ def sample_project(app):
     with app.app_context():
         project = Project(
             name="Test Project",
-            population="Adults with diabetes",
-            intervention="Exercise therapy",
-            comparison="Standard care",
-            outcomes="Blood glucose levels",
-            time_frame="6 months",
-            study_types="RCT, cohort studies"
+            description="A test project for systematic review",
+            config={
+                'pico': {
+                    'population': 'Adults with diabetes',
+                    'intervention': 'Exercise therapy',
+                    'comparison': 'Standard care',
+                    'outcomes': 'Blood glucose levels',
+                    'time_frame': '6 months',
+                    'study_types': 'RCT, cohort studies'
+                }
+            }
         )
         db.session.add(project)
         db.session.commit()
@@ -78,7 +83,7 @@ def sample_article(app, sample_project):
             title="Test Article Title",
             abstract="This is a test abstract for screening purposes.",
             authors="Smith, J.; Doe, A.",
-            journal_name="Test Journal",
+            journal="Test Journal",
             year="2023",
             project_id=sample_project.id
         )

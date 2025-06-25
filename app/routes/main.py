@@ -48,10 +48,20 @@ def create_project():
         name = request.form['name']
         description = request.form.get('description', '')
         
+        pico_config = {
+            'population': request.form.get('population', ''),
+            'intervention': request.form.get('intervention', ''),
+            'comparison': request.form.get('comparison', ''),
+            'outcomes': request.form.get('outcomes', ''),
+            'time_frame': request.form.get('time_frame', ''),
+            'study_types': request.form.get('study_types', '')
+        }
+        
         project = Project(
             name=name,
             description=description,
-            status='active'
+            status='active',
+            config={'pico': pico_config}
         )
         
         db.session.add(project)
