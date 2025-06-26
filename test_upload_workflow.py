@@ -57,13 +57,13 @@ def test_file_parsing():
                     else:
                         print(f"      ✅ Authors already string: {type(authors)}")
                 
-                return studies
+                all_studies.extend(studies)
                 
             except Exception as e:
                 print(f"   ❌ Error parsing {filename}: {e}")
                 continue
     
-    return []
+    return all_studies
 
 def test_database_integration(studies):
     """Test database integration with parsed studies."""
