@@ -336,8 +336,8 @@ def process_article(article_id):
     # Initialize screening orchestrator with dynamic configuration
     import os
     orchestrator = DualProviderScreeningOrchestrator(
-        openai_api_key=os.getenv('OPENAI_API_KEY'),
-        anthropic_api_key=os.getenv('ANTHROPIC_API_KEY'),
+        openai_api_key=os.getenv('OPENAI_API_KEY') or '',
+        anthropic_api_key=os.getenv('ANTHROPIC_API_KEY') or '',
         config=dual_config
     )
     
@@ -367,11 +367,14 @@ def process_article(article_id):
         
         logger.info(f"Article {article_id} processed successfully")
         
+        openai_result = results.get('openai')
+        anthropic_result = results.get('anthropic')
+        
         return jsonify({
             'success': True,
             'results': {
-                'openai': results.get('openai').model_dump() if results.get('openai') else None,
-                'anthropic': results.get('anthropic').model_dump() if results.get('anthropic') else None,
+                'openai': openai_result.model_dump() if openai_result is not None else None,
+                'anthropic': anthropic_result.model_dump() if anthropic_result is not None else None,
                 'agreement': agreement_analysis,
                 'human_review_triggers': human_review_triggers,
                 'final_decision': screening_record.get('final_decision'),
@@ -570,8 +573,8 @@ def start_workflow():
     # Start workflow (simplified - in production this would be async)
     import os
     orchestrator = ScreeningWorkflowOrchestrator(
-        openai_api_key=os.getenv('OPENAI_API_KEY'),
-        anthropic_api_key=os.getenv('ANTHROPIC_API_KEY')
+        openai_api_key=os.getenv('OPENAI_API_KEY') or '',
+        anthropic_api_key=os.getenv('ANTHROPIC_API_KEY') or ''
     )
     
     # Store workflow status
