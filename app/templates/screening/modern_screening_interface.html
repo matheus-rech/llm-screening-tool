@@ -129,6 +129,34 @@
                         </div>
                     </div>
                     
+                    <!-- Model Configuration Controls -->
+                    <div class="flex items-center space-x-4 text-xs">
+                        <div class="flex items-center space-x-2">
+                            <label class="text-gray-300">OpenAI Temp:</label>
+                            <input type="range" x-model="modelConfig.openaiTemperature" min="0" max="2" step="0.1" 
+                                   class="w-16 h-1" @input="updateModelConfig()">
+                            <span class="text-gray-400 w-8" x-text="modelConfig.openaiTemperature"></span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <label class="text-gray-300">Seed:</label>
+                            <input type="number" x-model="modelConfig.openaiSeed" 
+                                   class="w-16 px-1 py-0 text-xs border border-gray-600 rounded bg-gray-800 text-white" 
+                                   @input="updateModelConfig()" placeholder="None">
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <label class="text-gray-300">Anthropic Temp:</label>
+                            <input type="range" x-model="modelConfig.anthropicTemperature" min="0" max="2" step="0.1" 
+                                   class="w-16 h-1" @input="updateModelConfig()">
+                            <span class="text-gray-400 w-8" x-text="modelConfig.anthropicTemperature"></span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <label class="text-gray-300">Seed:</label>
+                            <input type="number" x-model="modelConfig.anthropicSeed" 
+                                   class="w-16 px-1 py-0 text-xs border border-gray-600 rounded bg-gray-800 text-white" 
+                                   @input="updateModelConfig()" placeholder="None">
+                        </div>
+                    </div>
+                    
                     <!-- Progress Info -->
                     <div class="text-right">
                         <p class="text-sm font-medium" 
@@ -350,7 +378,7 @@
                         </div>
 
                         <!-- PICOTT Extraction -->
-                        <div class="grid grid-cols-2 gap-4 text-sm" x-show="currentArticle?.ai_analysis?.openai?.picott_extraction">
+                        <div class="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <h5 class="font-medium text-gray-900 mb-2">Extracted PICOTT (OpenAI)</h5>
                                 <div class="space-y-1 text-gray-600">
@@ -432,7 +460,7 @@
                 
                 // Progress tracking
                 progress: {
-                    total: 250,
+                    total: 0,
                     processed: 0
                 },
                 
@@ -442,7 +470,7 @@
                     excluded: 0,
                     uncertain: 0,
                     conflicts: 0,
-                    agreement: 0.87
+                    agreement: 0.0
                 },
                 
                 // System status
@@ -499,6 +527,27 @@
                     } catch (error) {
                         console.error('Failed to load model configuration:', error);
                         this.addLog('Failed to load model configuration', 'text-red-400');
+                    }
+                },
+                
+                // Update model configuration
+                async updateModelConfig() {
+                    try {
+                        const response = await fetch(`/api/model-config/project/{{ project.id }}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.modelConfig)
+                        });
+                        
+                        const data = await response.json();
+                        if (data.success) {
+                            this.addLog('Model configuration updated', 'text-green-400');
+                        } else {
+                            this.addLog('Failed to update model configuration', 'text-red-400');
+                        }
+                    } catch (error) {
+                        console.error('Error updating model configuration:', error);
+                        this.addLog('Error updating model configuration', 'text-red-400');
                     }
                 },
                 
