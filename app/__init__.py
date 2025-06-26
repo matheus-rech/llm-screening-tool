@@ -25,7 +25,10 @@ def create_app(config_name=None):
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///screening_projects.db'
         app.config['DEBUG'] = True
     elif config_name == 'production':
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///screening_projects.db')
+        database_url = os.getenv('DATABASE_URL', 'sqlite:///screening_projects.db')
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        app.config['SQLALCHEMY_DATABASE_URI'] = database_url
         app.config['DEBUG'] = False
     else:  # testing
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
