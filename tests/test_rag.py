@@ -13,7 +13,7 @@ class TestFileParsers:
         with open(temp_file, 'w') as f:
             f.write(sample_ris_content)
         
-        articles = parse_ris_file(temp_file)
+        articles = parse_ris_file(sample_ris_content)
         assert len(articles) == 1
         assert articles[0]['title'] == 'Test Article'
         assert articles[0]['abstract'] == 'This is a test abstract for screening.'

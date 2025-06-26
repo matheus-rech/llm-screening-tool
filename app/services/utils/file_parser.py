@@ -374,6 +374,9 @@ def looks_like_ris(content: str) -> bool:
     ris_specific_count = sum(1 for tag in ris_specific_tags if tag in content)
     common_tag_count = sum(1 for tag in common_tags if tag in content)
     
+    print(f"DEBUG looks_like_ris: matches={len(matches)}, ris_specific_count={ris_specific_count}, common_tag_count={common_tag_count}")
+    print(f"DEBUG content preview: {repr(content[:200])}")
+    
     return len(matches) > 0 and ris_specific_count >= 1 and common_tag_count >= 1
 
 def looks_like_tsv(content: str) -> bool:
@@ -594,4 +597,4 @@ def search_and_enrich_studies(studies: List[Dict], entrez_email: str = "") -> Li
         
         enriched_studies.append(enriched_study)
     
-    return enriched_studies                                                
+    return enriched_studies                                                                                                                                                                                                
