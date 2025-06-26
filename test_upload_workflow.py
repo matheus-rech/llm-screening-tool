@@ -19,6 +19,7 @@ def test_file_parsing():
     print("-" * 40)
     
     test_files = ['test_citation_data.ris', 'test_records.ris', 'sample.ris']
+    all_studies = []
     
     for filename in test_files:
         if os.path.exists(filename):
