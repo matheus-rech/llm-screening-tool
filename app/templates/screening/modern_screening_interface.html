@@ -423,7 +423,7 @@
                 <div class="card p-12 text-center" x-show="!currentArticle">
                     <h3 class="text-lg font-medium mb-2">No Article Selected</h3>
                     <p class="text-gray-400 mb-6">Select an article from the queue to begin screening</p>
-                    <button @click="loadNextBatch()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-medium">
+                    <button @click="loadNextBatch(); addLog('Load Articles button clicked', 'text-blue-400')" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-medium">
                         Load Articles
                     </button>
                 </div>
@@ -554,15 +554,23 @@
                 // Queue management
                 async loadArticleQueue() {
                     try {
+                        this.addLog('Loading article queue...', 'text-blue-400');
                         const response = await fetch(`/api/screening/queue?strategy=${this.queueStrategy}&project_id={{ project.id }}`);
                         const data = await response.json();
-                        this.articleQueue = data.articles || [];
                         
-                        if (this.articleQueue.length > 0 && !this.currentArticle) {
-                            this.selectArticle(this.articleQueue[0]);
+                        if (data.success && data.articles) {
+                            this.articleQueue = data.articles;
+                            this.addLog(`Loaded ${data.articles.length} articles from queue`, 'text-green-400');
+                            
+                            if (this.articleQueue.length > 0 && !this.currentArticle) {
+                                this.selectArticle(this.articleQueue[0]);
+                            }
+                        } else {
+                            this.addLog('Failed to load articles: ' + (data.error || 'Unknown error'), 'text-red-400');
                         }
                     } catch (error) {
                         console.error('Failed to load article queue:', error);
+                        this.addLog('Error loading article queue: ' + error.message, 'text-red-400');
                     }
                 },
                 
@@ -651,6 +659,7 @@
                 },
                 
                 async loadNextBatch() {
+                    this.addLog('Loading next batch of articles...', 'text-blue-400');
                     await this.loadArticleQueue();
                 },
                 

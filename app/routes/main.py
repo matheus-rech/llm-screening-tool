@@ -13,7 +13,7 @@ import logging
 import pandas as pd
 import rispy
 import bibtexparser
-from flask import Blueprint, render_template, request, redirect, url_for, send_from_directory, Response, stream_with_context, jsonify, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, send_from_directory, Response, stream_with_context, jsonify, send_file, make_response
 from werkzeug.utils import secure_filename
 
 from app.models.screening_models import db, Project, Article
@@ -195,12 +195,15 @@ def export_dual_llm_comparison(project_id):
     
     try:
         filepath = exporter.generate_comparison_spreadsheet(articles_with_results, project.name)
-        return send_file(
+        
+        response = make_response(send_file(
             filepath,
             as_attachment=True,
             download_name=f'{project.name}_dual_llm_comparison.xlsx',
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
+        ))
+        response.headers['Content-Disposition'] = f'attachment; filename="{project.name}_dual_llm_comparison.xlsx"'
+        return response
     except Exception as e:
         logger.error(f"Error generating comparison spreadsheet: {str(e)}")
         return jsonify({'error': f'Export failed: {str(e)}'}), 500
