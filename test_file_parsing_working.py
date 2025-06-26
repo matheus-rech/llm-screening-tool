@@ -7,7 +7,7 @@ import sys
 import os
 
 def parse_ris_simple(content):
-    """Simple RIS parser that works with the sample.ris format."""
+    """Simple RIS parser that works with RIS format."""
     studies = []
     lines = content.strip().split('\n')
     current_study = {}
@@ -48,7 +48,7 @@ def test_file_parsing():
     print("This test verifies the type conversion fixes for authors/keywords.")
     print()
     
-    filename = 'sample.ris'
+    filename = 'test_citation_data.ris'
     
     if not os.path.exists(filename):
         print(f"⚠️  File {filename} not found!")
