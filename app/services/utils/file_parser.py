@@ -149,18 +149,143 @@ def parse_csv_file(file_content: str) -> List[Dict]:
 
 def parse_medline_txt_file(file_content: str) -> List[Dict]:
     studies = []
-    file_like_object = io.StringIO(file_content)
-    records = Medline.parse(file_like_object)
-    for record in records:
-        studies.append({
-            "title": record.get("TI", ""),
-            "abstract": record.get("AB", ""),
-            "authors": record.get("AU", []),
-            "year": record.get("DP", "").split()[0] if "DP" in record else "",
-            "journal_name": record.get("JT", "")
-        })
-    return studies
+    
+    try:
+        file_like_object = io.StringIO(file_content)
+        records = Medline.parse(file_like_object)
+        for record in records:
+            study = {
+                "title": record.get("TI", ""),
+                "abstract": record.get("AB", ""),
+                "authors": record.get("AU", []),
+                "year": record.get("DP", "").split()[0] if "DP" in record else "",
+                "journal_name": record.get("JT", "")
+            }
+            studies.append(study)
+        
+        if studies and any(study.get("title") or study.get("abstract") for study in studies):
+            return studies
+    except Exception as e:
+        print(f"Standard MEDLINE parsing failed: {e}")
+    
+    print("Falling back to PubMed citation format parsing...")
+    return parse_pubmed_citation_format(file_content)
 
+
+def parse_pubmed_citation_format(file_content: str) -> List[Dict]:
+    """
+    Parse PubMed citation format exported from PubMed database.
+    Format: numbered entries with journal info, title, authors, abstract, etc.
+    """
+    studies = []
+    
+    import re
+    entries = re.split(r'\n\n(?=\d+\.\s)', file_content.strip())
+    
+    for entry in entries:
+        if not entry.strip():
+            continue
+            
+        lines = entry.strip().split('\n')
+        study = {
+            "title": "",
+            "abstract": "",
+            "authors": [],
+            "year": "",
+            "journal_name": "",
+            "doi": "",
+            "pmid": ""
+        }
+        
+        current_section = "header"
+        title_lines = []
+        author_lines = []
+        abstract_lines = []
+        
+        for i, line in enumerate(lines):
+            line = line.strip()
+            
+            if not line:
+                continue
+            
+            if i == 0 and re.match(r'^\d+\.\s', line):
+                year_match = re.search(r'(\d{4})', line)
+                if year_match:
+                    study["year"] = year_match.group(1)
+                
+                journal_match = re.search(r'^\d+\.\s+([^.]+)\.\s+\d{4}', line)
+                if journal_match:
+                    study["journal_name"] = journal_match.group(1).strip()
+                
+                doi_match = re.search(r'doi:\s*(10\.\S+)', line)
+                if doi_match:
+                    study["doi"] = doi_match.group(1).rstrip('.')
+                
+                pmid_match = re.search(r'PMID:\s*(\d+)', line)
+                if pmid_match:
+                    study["pmid"] = pmid_match.group(1)
+                
+                current_section = "title"
+                continue
+            
+            if current_section == "title":
+                if re.search(r'\(\d+\)', line) or line.startswith("Author information:"):
+                    current_section = "authors"
+                    if not line.startswith("Author information:"):
+                        author_lines.append(line)
+                    continue
+                else:
+                    title_lines.append(line)
+                    continue
+            
+            if current_section == "authors":
+                if line.startswith("Author information:"):
+                    current_section = "author_info"
+                    continue
+                elif not line.upper().startswith(("BACKGROUND:", "METHODS:", "RESULTS:", "CONCLUSION:", "OBJECTIVE:", "PURPOSE:")):
+                    author_lines.append(line)
+                    continue
+                else:
+                    current_section = "abstract"
+                    abstract_lines.append(line)
+                    continue
+            
+            if current_section == "author_info":
+                if line.upper().startswith(("BACKGROUND:", "METHODS:", "RESULTS:", "CONCLUSION:", "OBJECTIVE:", "PURPOSE:")):
+                    current_section = "abstract"
+                    abstract_lines.append(line)
+                    continue
+                else:
+                    continue
+            
+            if current_section == "abstract":
+                if line.startswith("©") or line.startswith("DOI:") or line.startswith("PMCID:") or line.startswith("PMID:") or line.startswith("Conflict of interest"):
+                    break
+                abstract_lines.append(line)
+                continue
+        
+        study["title"] = " ".join(title_lines).strip()
+        
+        if author_lines:
+            authors_text = " ".join(author_lines)
+            authors_clean = re.sub(r'\([^)]*\)', '', authors_text)
+            author_names = [name.strip().rstrip(',') for name in authors_clean.split(',') if name.strip()]
+            study["authors"] = [name for name in author_names if name and not name.isdigit()]
+        
+        if abstract_lines:
+            study["abstract"] = " ".join(abstract_lines).strip()
+        
+        if not study["pmid"] and abstract_lines:
+            for line in abstract_lines:
+                pmid_match = re.search(r'PMID:\s*(\d+)', line)
+                if pmid_match:
+                    study["pmid"] = pmid_match.group(1)
+                    break
+        
+        if study["title"]:
+            studies.append(study)
+    
+    return studies
 
 def parse_xml_file(file_content: str) -> List[Dict]:
     studies = []
@@ -581,4 +706,4 @@ def search_and_enrich_studies(studies: List[Dict], entrez_email: str = "") -> Li
         
         enriched_studies.append(enriched_study)
     
-    return enriched_studies    
+    return enriched_studies                        
