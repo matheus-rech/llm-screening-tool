@@ -7,8 +7,8 @@ Runs the Flask application using the factory pattern.
 import os
 from app import create_app, db
 
-# Create application instance with production config
-app = create_app('production')
+# Create application instance with development config for local testing
+app = create_app('development')
 
 # Initialize database tables
 with app.app_context():

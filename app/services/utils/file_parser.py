@@ -362,13 +362,19 @@ def looks_like_ris(content: str) -> bool:
     if not content:
         return False
     
+    if 'TY  - ' not in content:
+        return False
+    
     ris_pattern = re.compile(r'^[A-Z][A-Z0-9]\s{2}-\s', re.MULTILINE)
     matches = ris_pattern.findall(content)
     
-    common_tags = ['TY  - ', 'TI  - ', 'AU  - ', 'ER  - ']
-    tag_count = sum(1 for tag in common_tags if tag in content)
+    ris_specific_tags = ['TY  - ', 'ER  - ']  # Type and End Record are RIS-specific
+    common_tags = ['TI  - ', 'AU  - ']  # Title and Author are common
     
-    return len(matches) > 0 and tag_count >= 2
+    ris_specific_count = sum(1 for tag in ris_specific_tags if tag in content)
+    common_tag_count = sum(1 for tag in common_tags if tag in content)
+    
+    return len(matches) > 0 and ris_specific_count >= 1 and common_tag_count >= 1
 
 def looks_like_tsv(content: str) -> bool:
     """Check if content appears to be TSV format"""
@@ -588,4 +594,4 @@ def search_and_enrich_studies(studies: List[Dict], entrez_email: str = "") -> Li
         
         enriched_studies.append(enriched_study)
     
-    return enriched_studies                        
+    return enriched_studies                                                
