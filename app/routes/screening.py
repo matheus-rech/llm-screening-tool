@@ -573,8 +573,8 @@ def start_workflow():
     # Start workflow (simplified - in production this would be async)
     import os
     orchestrator = ScreeningWorkflowOrchestrator(
-        openai_api_key=os.getenv('OPENAI_API_KEY') or '',
-        anthropic_api_key=os.getenv('ANTHROPIC_API_KEY') or ''
+        openai_api_key=os.getenv('OPENAI_API_KEY'),
+        anthropic_api_key=os.getenv('ANTHROPIC_API_KEY')
     )
     
     # Store workflow status
