@@ -102,8 +102,8 @@ def parse_ris_manual(ris_data: str) -> List[Dict]:
                         current_citation["year"] = year_match.group()
                 elif line == "ER  - ":
                     if current_citation:
-                        current_citation["authors"] = cur_authors
-                        current_citation["keywords"] = cur_keywords
+                        current_citation["authors"] = ", ".join(cur_authors) if cur_authors else ""
+                        current_citation["keywords"] = ", ".join(cur_keywords) if cur_keywords else ""
         
         studies = []
         for citation in ris_dict.values():
@@ -706,4 +706,4 @@ def search_and_enrich_studies(studies: List[Dict], entrez_email: str = "") -> Li
         
         enriched_studies.append(enriched_study)
     
-    return enriched_studies                        
+    return enriched_studies                                
