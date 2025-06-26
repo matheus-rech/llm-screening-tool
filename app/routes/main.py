@@ -356,7 +356,7 @@ def load_sample_data():
         db.session.commit()
         logger.info(f"Deleted {existing_count} existing articles")
         
-        sample_file_path = os.path.join(os.path.dirname(__file__), '..', '..', 'test_data', 'sample_diabetes_studies.ris')
+        sample_file_path = os.path.join(os.path.dirname(__file__), '..', '..', 'sample.ris')
         logger.info(f"Sample file path: {sample_file_path}")
         
         if not os.path.exists(sample_file_path):
@@ -369,7 +369,7 @@ def load_sample_data():
         
         logger.info(f"File content length: {len(file_content)}")
         
-        studies = load_studies(file_content, 'sample_diabetes_studies.ris')
+        studies = load_studies(file_content, 'sample.ris')
         logger.info(f"Number of studies parsed: {len(studies)}")
         
         if not studies:
