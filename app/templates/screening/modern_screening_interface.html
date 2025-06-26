@@ -453,6 +453,14 @@
                 currentCost: 0.0,
                 showKeyboardHelp: false,
                 
+                // Model configuration
+                modelConfig: {
+                    openaiTemperature: 0.1,
+                    openaiSeed: null,
+                    anthropicTemperature: 0.1,
+                    anthropicSeed: null
+                },
+                
                 // Logging system
                 logs: [],
                 logId: 0,
@@ -460,6 +468,7 @@
                 // Initialization
                 init() {
                     this.addLog('System initialized. Ready for screening.', 'text-green-400');
+                    this.loadModelConfig();
                     this.loadArticleQueue();
                     this.setupKeyboardShortcuts();
                     this.startProgressTracking();
@@ -471,6 +480,26 @@
                             this.addLog('Auto-saving configuration...', 'text-gray-400');
                         }
                     }, 1000);
+                },
+                
+                // Load model configuration
+                async loadModelConfig() {
+                    try {
+                        const response = await fetch('/api/model-config/project/{{ project.id }}');
+                        const data = await response.json();
+                        if (data.success && data.config) {
+                            this.modelConfig = {
+                                openaiTemperature: data.config.temperature || 0.1,
+                                openaiSeed: data.config.seed,
+                                anthropicTemperature: data.config.temperature || 0.1,
+                                anthropicSeed: data.config.seed
+                            };
+                            this.addLog('Model configuration loaded successfully.', 'text-green-400');
+                        }
+                    } catch (error) {
+                        console.error('Failed to load model configuration:', error);
+                        this.addLog('Failed to load model configuration', 'text-red-400');
+                    }
                 },
                 
                 // Queue management
