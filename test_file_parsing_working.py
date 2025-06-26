@@ -65,7 +65,8 @@ def test_file_parsing():
         print(content[:300] + "..." if len(content) > 300 else content)
         print()
         
-        studies = parse_ris_simple(content)
+        from app.services.utils.file_parser import parse_ris_manual
+        studies = parse_ris_manual(content)
         print(f"✅ Successfully parsed {len(studies)} studies")
         
         for i, study in enumerate(studies, 1):
