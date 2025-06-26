@@ -376,11 +376,10 @@ def load_sample_data():
             logger.error("No studies were parsed from the sample file")
             return jsonify({'success': False, 'error': 'No studies could be parsed from sample file'}), 500
         
-        # Create articles in database with mock screening results for demonstration
+        # Create articles in database without pre-screening (users will perform real screening)
         articles_count = 0
-        mock_decisions = ['INCLUDE', 'EXCLUDE', 'INCLUDE', 'EXCLUDE', 'INCLUDE']
         
-        logger.info(f"Starting to create {len(studies)} articles with mock screening results")
+        logger.info(f"Starting to create {len(studies)} articles for real screening")
         
         for i, study in enumerate(studies):
             try:
@@ -388,29 +387,6 @@ def load_sample_data():
                 authors = study.get('authors', '')
                 if isinstance(authors, list):
                     authors = ', '.join(authors)
-                
-                mock_decision = mock_decisions[i % len(mock_decisions)]
-                mock_screening_record = {
-                    'article_id': str(i + 1),
-                    'project_id': str(project_id),
-                    'timestamp': datetime.utcnow().isoformat(),
-                    'openai_result': {
-                        'screening_decision': {'final_decision': mock_decision},
-                        'confidence_score': 0.85,
-                        'llm_provider': 'openai',
-                        'model_name': 'gpt-4o'
-                    },
-                    'anthropic_result': {
-                        'screening_decision': {'final_decision': mock_decision},
-                        'confidence_score': 0.82,
-                        'llm_provider': 'anthropic', 
-                        'model_name': 'claude-3-5-sonnet-20241022'
-                    },
-                    'agreement_analysis': {'decision_agreement': True},
-                    'human_review_triggers': {'should_review': False},
-                    'final_decision': mock_decision,
-                    'requires_human_review': False
-                }
                 
                 article = Article(
                     project_id=project_id,
@@ -422,8 +398,8 @@ def load_sample_data():
                     doi=study.get('doi', ''),
                     pmid=study.get('pmid', ''),
                     original_data=study,
-                    status='included' if mock_decision == 'INCLUDE' else 'excluded',
-                    decision_reasoning=mock_screening_record
+                    status='pending',
+                    decision_reasoning=None
                 )
                 
                 db.session.add(article)
@@ -449,7 +425,7 @@ def load_sample_data():
         return jsonify({
             'success': True,
             'articles_count': articles_count,
-            'message': f'Successfully loaded {articles_count} sample articles with mock screening results'
+            'message': f'Successfully loaded {articles_count} sample articles ready for screening'
         })
         
     except Exception as e:
