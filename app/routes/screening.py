@@ -336,8 +336,8 @@ def process_article(article_id):
     # Initialize screening orchestrator with dynamic configuration
     import os
     orchestrator = DualProviderScreeningOrchestrator(
-        openai_api_key=os.getenv('OPENAI_API_KEY') or '',
-        anthropic_api_key=os.getenv('ANTHROPIC_API_KEY') or '',
+        openai_api_key=os.getenv('OPENAI_API_KEY'),
+        anthropic_api_key=os.getenv('ANTHROPIC_API_KEY'),
         config=dual_config
     )
     
