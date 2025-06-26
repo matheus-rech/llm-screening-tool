@@ -43,11 +43,15 @@ class DualLLMComparisonExporter:
             'Study_Type': pico.get('study_type', 'Not found')
         }
     
-    def parse_decision_reasoning(self, decision_reasoning: str) -> Dict[str, Any]:
-        """Parse the JSON decision_reasoning field to extract dual-LLM results."""
+    def parse_decision_reasoning(self, decision_reasoning) -> Dict[str, Any]:
+        """Parse the decision_reasoning field to extract dual-LLM results."""
         try:
-            data = json.loads(decision_reasoning)
-            return data
+            if isinstance(decision_reasoning, dict):
+                return decision_reasoning
+            elif isinstance(decision_reasoning, str):
+                return json.loads(decision_reasoning)
+            else:
+                return {}
         except (json.JSONDecodeError, TypeError):
             return {}
     
