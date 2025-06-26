@@ -918,63 +918,38 @@ function llmScreeningTool() {
         logId: 0,
         selectedStudy: null,
         studies: [
-            { 
-                id: 1, 
-                title: 'Efficacy and safety of metformin in type 2 diabetes', 
-                authors: 'Johnson A, et al.', 
-                year: 2021,
-                abstract: 'This randomized controlled trial investigates the long-term efficacy and safety of metformin compared to placebo in 500 adults with newly diagnosed type 2 diabetes over a 24-month period. Primary outcomes were changes in HbA1c levels.',
-                status: { text: 'Included', class: 'status-green' },
-                agreement: 'Agreement',
+            {% for article in articles %}
+            {
+                id: {{ article.id }},
+                title: {{ article.title|tojson }},
+                authors: {{ article.authors|tojson }},
+                year: {{ article.year or 'N/A' }},
+                abstract: {{ article.abstract|tojson }},
+                status: {
+                    text: {% if article.status == 'included' %}'Included'{% elif article.status == 'excluded' %}'Excluded'{% elif article.status == 'pending' %}'Pending'{% else %}'Unknown'{% endif %},
+                    class: {% if article.status == 'included' %}'status-green'{% elif article.status == 'excluded' %}'status-red'{% elif article.status == 'pending' %}'status-yellow'{% else %}'status-gray'{% endif %}
+                },
+                agreement: {% if article.decision_reasoning %}'Agreement'{% else %}'Pending'{% endif %},
                 pico: [
-                    { label: 'Population', value: 95 },
-                    { label: 'Intervention', value: 98 },
-                    { label: 'Comparison', value: 90 },
-                    { label: 'Outcomes', value: 85 },
-                    { label: 'Time Frame', value: 100 },
-                    { label: 'Study Types', value: 100 },
-                ],
-                model1: { decision: 'Include', confidence: 98, reasoning: 'All PICO criteria are met. RCT design is appropriate.'},
-                model2: { decision: 'Include', confidence: 95, reasoning: 'Strong match with population, intervention, and outcomes.'}
-            },
-            { 
-                id: 2, 
-                title: 'A qualitative study on patient experiences with insulin pumps', 
-                authors: 'Smith B, et al.', 
-                year: 2020,
-                abstract: 'This study explores the lived experiences of 20 patients using insulin pump therapy for type 1 diabetes. Data was collected through semi-structured interviews and analyzed using thematic analysis. The focus was on quality of life.',
-                status: { text: 'Excluded', class: 'status-red' },
-                agreement: 'Agreement',
-                 pico: [
-                    { label: 'Population', value: 40 },
-                    { label: 'Intervention', value: 30 },
+                    { label: 'Population', value: 0 },
+                    { label: 'Intervention', value: 0 },
                     { label: 'Comparison', value: 0 },
-                    { label: 'Outcomes', value: 20 },
-                    { label: 'Time Frame', value: 10 },
+                    { label: 'Outcomes', value: 0 },
+                    { label: 'Time Frame', value: 0 },
                     { label: 'Study Types', value: 0 },
                 ],
-                model1: { decision: 'Exclude', confidence: 100, reasoning: 'Wrong study type (qualitative) and population (Type 1).'},
-                model2: { decision: 'Exclude', confidence: 100, reasoning: 'Does not match study type criteria (not an RCT).'}
-            },
-            { 
-                id: 3, 
-                title: 'Short-term effects of a novel GLP-1 agonist in adults', 
-                authors: 'Chen C, et al.', 
-                year: 2022,
-                abstract: 'This pilot study examines the effects of a new GLP-1 agonist on glycemic control in adults over a 3-month period. While promising, the population includes both pre-diabetic and type 2 diabetic individuals.',
-                status: { text: 'Conflict', class: 'status-yellow' },
-                agreement: 'Conflict',
-                 pico: [
-                    { label: 'Population', value: 70 },
-                    { label: 'Intervention', value: 80 },
-                    { label: 'Comparison', value: 50 },
-                    { label: 'Outcomes', value: 75 },
-                    { label: 'Time Frame', value: 40 },
-                    { label: 'Study Types', value: 60 },
-                ],
-                model1: { decision: 'Exclude', confidence: 85, reasoning: 'Time frame (3 months) is too short. Population is mixed.'},
-                model2: { decision: 'Include', confidence: 75, reasoning: 'Potentially relevant intervention and outcomes. Flag for full-text review despite short time frame.'}
-            },
+                model1: { 
+                    decision: {% if article.decision_reasoning %}'{{ article.decision_reasoning.get("openai", {}).get("screening_decision", {}).get("final_decision", "Pending") }}'{% else %}'Pending'{% endif %}, 
+                    confidence: {% if article.decision_reasoning %}{{ article.decision_reasoning.get("openai", {}).get("screening_decision", {}).get("confidence_score", 0) }}{% else %}0{% endif %}, 
+                    reasoning: {% if article.decision_reasoning %}{{ article.decision_reasoning.get("openai", {}).get("screening_decision", {}).get("reasoning", "No reasoning available")|tojson }}{% else %}'Pending screening'{% endif %}
+                },
+                model2: { 
+                    decision: {% if article.decision_reasoning %}'{{ article.decision_reasoning.get("anthropic", {}).get("screening_decision", {}).get("final_decision", "Pending") }}'{% else %}'Pending'{% endif %}, 
+                    confidence: {% if article.decision_reasoning %}{{ article.decision_reasoning.get("anthropic", {}).get("screening_decision", {}).get("confidence_score", 0) }}{% else %}0{% endif %}, 
+                    reasoning: {% if article.decision_reasoning %}{{ article.decision_reasoning.get("anthropic", {}).get("screening_decision", {}).get("reasoning", "No reasoning available")|tojson }}{% else %}'Pending screening'{% endif %}
+                }
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
         ],
         prismaData: {},
 
