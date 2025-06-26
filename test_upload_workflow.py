@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from app.services.utils.file_parser import parse_ris_file, parse_ris_manual, load_studies
 from app.models.screening_models import db, Project, Article
 from app import create_app
-from datetime import datetime
+from datetime import datetime, timezone
 
 def test_file_parsing():
     """Test file parsing functionality with detailed output."""
@@ -83,8 +83,8 @@ def test_database_integration(studies):
             project = Project(
                 name="Test Upload Workflow Project",
                 description="Testing complete file upload workflow",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc)
             )
             db.session.add(project)
             db.session.commit()
@@ -112,8 +112,8 @@ def test_database_integration(studies):
                         pmid=study.get('pmid', ''),
                         original_data=study,
                         status='pending',  # Critical: articles should have 'pending' status
-                        created_at=datetime.utcnow(),
-                        updated_at=datetime.utcnow()
+                        created_at=datetime.now(timezone.utc),
+                        updated_at=datetime.now(timezone.utc)
                     )
                     
                     db.session.add(article)
@@ -159,7 +159,7 @@ def test_complete_workflow():
     """Test complete workflow from file parsing to database storage."""
     print("🚀 LLM Screening Tool - Complete Upload Workflow Test")
     print("=" * 60)
-    print(f"Test started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Test started at: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
     print("")
     
     studies = test_file_parsing()
