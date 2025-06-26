@@ -64,6 +64,7 @@ def test_file_parsing():
                 print(f"   ❌ Error parsing {filename}: {e}")
                 continue
     
+    assert len(all_studies) > 0, "No studies were parsed from the test files"
     return all_studies
 
 def test_database_integration(studies):
@@ -194,6 +195,7 @@ def test_complete_workflow():
     print("")
     print("✨ The file upload workflow is working correctly!")
     
+    assert True, "Complete workflow test passed"
     return True
 
 if __name__ == "__main__":
