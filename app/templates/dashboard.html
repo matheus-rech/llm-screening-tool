@@ -1441,19 +1441,12 @@ function handleFileUpload(input) {
     // Show database source selection
     document.getElementById('database-source-selection').style.display = 'block';
     
-    // Store file reference in Alpine.js store
-    if (window.Alpine && window.Alpine.store) {
-        window.Alpine.store('fileUpload').selectedFile = file;
-        window.Alpine.store('fileUpload').showSourceSelection = true;
-    }
-    window.selectedFile = file; // Fallback for compatibility
+    // Store file reference for compatibility
+    window.selectedFile = file;
     
     // Handle confirm upload
     document.getElementById('confirm-upload').onclick = function() {
         const databaseSource = document.getElementById('database-source').value;
-        if (window.Alpine && window.Alpine.store) {
-            window.Alpine.store('fileUpload').databaseSource = databaseSource;
-        }
         performFileUpload(file, databaseSource);
     };
     
@@ -1461,11 +1454,7 @@ function handleFileUpload(input) {
     document.getElementById('cancel-upload').onclick = function() {
         document.getElementById('database-source-selection').style.display = 'none';
         input.value = ''; // Clear file input
-        if (window.Alpine && window.Alpine.store) {
-            window.Alpine.store('fileUpload').selectedFile = null;
-            window.Alpine.store('fileUpload').showSourceSelection = false;
-        }
-        window.selectedFile = null; // Fallback for compatibility
+        window.selectedFile = null;
     };
 }
 
