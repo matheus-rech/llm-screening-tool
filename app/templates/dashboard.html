@@ -577,7 +577,6 @@
                                 <div class="text-center">
                                     <input type="file" id="file-upload" accept=".xml,.ris,.scrn,.bib,.csv,.txt" multiple style="display: none;" onchange="handleFileUpload(this)" />
                                     <p class="mb-3">Drag and drop XML, RIS, SCRN files here or <span class="text-blue-400 hover:underline cursor-pointer" onclick="document.getElementById('file-upload').click()">browse</span>.</p>
-                                    <button class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md text-white font-semibold shadow-md" onclick="loadSampleData()">Load Sample Data</button>
                                 </div>
                             </div>
                             
@@ -1630,50 +1629,6 @@ function populateFormWithTemplate(template) {
     });
 }
 
-function loadSampleData() {
-    // Get current project ID from the active project context
-    let projectId = null;
-    
-    // Try to get project ID from URL first
-    const urlMatch = window.location.pathname.match(/\/project\/(\d+)/);
-    if (urlMatch) {
-        projectId = urlMatch[1];
-    } else {
-        // If not in URL, try to get from the current project context
-        // Look for project ID in the current page context
-        const projectCards = document.querySelectorAll('[data-project-id]');
-        if (projectCards.length > 0) {
-            // Use the first project found (assuming single project context)
-            projectId = projectCards[0].getAttribute('data-project-id');
-        } else {
-            // Try to get from session storage or other context
-            projectId = sessionStorage.getItem('currentProjectId');
-        }
-    }
-    
-    if (!projectId) {
-        alert('No active project found. Please create a project first.');
-        return;
-    }
-    
-    fetch('/load-sample-data', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({project_id: projectId})
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert(`Successfully loaded ${data.articles_count} sample articles for demonstration`);
-            location.reload();
-        } else {
-            alert('Failed to load sample data: ' + data.error);
-        }
-    })
-    .catch(error => {
-        alert('Error loading sample data: ' + error.message);
-    });
-}
 </script>
 
 </body>
