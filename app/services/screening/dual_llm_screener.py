@@ -521,7 +521,7 @@ class MultiProviderScreeningOrchestrator:
         # Decision consensus
         decisions = [r.screening_decision.final_decision for r in valid_results.values()]
         decision_counts = {d: decisions.count(d) for d in set(decisions)}
-        majority_decision = max(decision_counts, key=decision_counts.get)
+        majority_decision = max(decision_counts.keys(), key=lambda k: decision_counts[k])
         decision_consensus = decision_counts[majority_decision] / len(decisions)
         
         # Confidence consensus
@@ -558,7 +558,7 @@ class MultiProviderScreeningOrchestrator:
                 confidence = result.screening_decision.confidence_score
                 weighted_votes[decision] = weighted_votes.get(decision, 0) + confidence
             
-            return max(weighted_votes, key=weighted_votes.get) if weighted_votes else 'UNCERTAIN'
+            return max(weighted_votes.keys(), key=lambda k: weighted_votes[k]) if weighted_votes else 'UNCERTAIN'
         
         elif self.config.consensus_strategy == "unanimous":
             decisions = [r.screening_decision.final_decision for r in valid_results.values()]
