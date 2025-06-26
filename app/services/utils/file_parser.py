@@ -35,10 +35,11 @@ def parse_ris_file(file_content: str) -> List[Dict]:
         entries = rispy.loads(file_content)
         studies = []
         for entry in entries:
+            authors = entry.get("authors", [])
             studies.append({
                 "title": entry.get("title", entry.get("primary_title", "")),
                 "abstract": entry.get("abstract", ""),
-                "authors": entry.get("authors", []),
+                "authors": ', '.join(authors) if isinstance(authors, list) else str(authors),
                 "year": entry.get("year", ""),
                 "journal_name": entry.get("journal_name", ""),
                 "pmid": entry.get("pmid", "")
@@ -140,10 +141,16 @@ def parse_csv_file(file_content: str) -> List[Dict]:
     file_like_object = io.StringIO(file_content)
     reader = csv.DictReader(file_like_object)
     for row in reader:
+        authors = row.get("authors", "")
         studies.append({
             "studyid": row.get("id", row.get("pmid", "")),
             "title": row.get("title", ""),
-            "abstract": row.get("abstract", "")
+            "abstract": row.get("abstract", ""),
+            "authors": ', '.join(authors.split(';')) if ';' in authors else str(authors),
+            "year": row.get("year", ""),
+            "journal_name": row.get("journal_name", ""),
+            "pmid": row.get("pmid", ""),
+            "keywords": row.get("keywords", "")
         })
     return studies
 
@@ -581,4 +588,4 @@ def search_and_enrich_studies(studies: List[Dict], entrez_email: str = "") -> Li
         
         enriched_studies.append(enriched_study)
     
-    return enriched_studies        
+    return enriched_studies                        
