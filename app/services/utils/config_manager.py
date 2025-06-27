@@ -174,7 +174,17 @@ class ConfigurationManager:
         now = datetime.now().isoformat()
         
         try:
-            pico = PICOCriteria(**pico_data)
+            pico_defaults = {
+                'population': '',
+                'intervention': '',
+                'comparison': '',
+                'outcomes': '',
+                'time_frame': '',
+                'study_types': ''
+            }
+            pico_kwargs = {**pico_defaults, **pico_data}
+            pico = PICOCriteria(**pico_kwargs)
+
             api = APIConfiguration(**api_data)
             processing = ProcessingConfiguration(**processing_data)
             
@@ -196,7 +206,8 @@ class ConfigurationManager:
             return config
             
         except TypeError as e:
-            raise ConfigurationError(f"Invalid configuration data: {e}")
+            # Dataclass construction failed due to missing or invalid fields
+            raise ValidationError(f"Invalid configuration data: {e}")
     
     def save_template(self, config: ProjectConfiguration, template_name: str) -> str:
         """Save configuration as a template."""
@@ -229,10 +240,14 @@ class ConfigurationManager:
         try:
             with open(template_path, 'r') as f:
                 template_data = json.load(f)
-            
-            # Validate against schema
-            jsonschema.validate(template_data, self.SCHEMA)
-            
+
+            # jsonschema validation requires an api_key, but templates omit it
+            temp_validate_data = json.loads(json.dumps(template_data))
+            if 'api' in temp_validate_data and 'api_key' not in temp_validate_data['api']:
+                temp_validate_data['api']['api_key'] = 'placeholder'
+
+            jsonschema.validate(temp_validate_data, self.SCHEMA)
+
             return template_data
             
         except json.JSONDecodeError as e:
@@ -274,7 +289,16 @@ class ConfigurationManager:
         
         # Additional custom validation
         try:
-            pico = PICOCriteria(**config_dict.get('pico', {}))
+            pico_defaults = {
+                'population': '',
+                'intervention': '',
+                'comparison': '',
+                'outcomes': '',
+                'time_frame': '',
+                'study_types': ''
+            }
+            pico_data = {**pico_defaults, **config_dict.get('pico', {})}
+            pico = PICOCriteria(**pico_data)
             errors.extend(pico.validate())
         except TypeError as e:
             errors.append(f"Invalid PICO data: {e}")

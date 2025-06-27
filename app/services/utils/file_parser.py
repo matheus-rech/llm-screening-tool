@@ -7,6 +7,7 @@ from lxml import etree
 from Bio import Entrez, Medline
 from typing import List, Dict, Optional, Tuple
 import operator
+import os
 try:
     from nltk.metrics import edit_distance
 except ImportError:
@@ -137,8 +138,15 @@ def parse_tsv_file(file_content: str) -> List[Dict]:
     return studies
 
 def parse_csv_file(file_content: str) -> List[Dict]:
+    """Parse a CSV file and return a list of study dictionaries."""
     studies = []
-    file_like_object = io.StringIO(file_content)
+    # Accept either file content or a path to a CSV file
+    if os.path.exists(file_content):
+        with open(file_content, "r", encoding="utf-8") as f:
+            file_like_object = io.StringIO(f.read())
+    else:
+        file_like_object = io.StringIO(file_content)
+
     reader = csv.DictReader(file_like_object)
     for row in reader:
         authors = row.get("authors", "")
