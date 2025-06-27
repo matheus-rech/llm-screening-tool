@@ -231,7 +231,7 @@ class ConfigurationManager:
                 template_data = json.load(f)
             
             # Validate against schema (API key optional for templates)
-            template_schema = json.loads(json.dumps(self.SCHEMA))
+            template_schema = copy.deepcopy(self.SCHEMA)
             template_schema["properties"]["api"]["required"] = []
             jsonschema.validate(template_data, template_schema)
             
