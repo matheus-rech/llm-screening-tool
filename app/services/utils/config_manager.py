@@ -2,6 +2,7 @@
 
 import json
 import os
+import copy
 from typing import Dict, Any, List, Optional, Union
 from dataclasses import dataclass, asdict
 from pathlib import Path
@@ -109,6 +110,16 @@ class ProjectConfiguration:
 class ConfigurationManager:
     """Enhanced configuration management system."""
     
+    # Default values for PICO criteria fields
+    PICO_DEFAULTS = {
+        'population': '',
+        'intervention': '',
+        'comparison': '',
+        'outcomes': '',
+        'time_frame': '',
+        'study_types': ''
+    }
+    
     SCHEMA = {
         "type": "object",
         "properties": {
@@ -174,15 +185,7 @@ class ConfigurationManager:
         now = datetime.now().isoformat()
         
         try:
-            pico_defaults = {
-                'population': '',
-                'intervention': '',
-                'comparison': '',
-                'outcomes': '',
-                'time_frame': '',
-                'study_types': ''
-            }
-            pico_kwargs = {**pico_defaults, **pico_data}
+            pico_kwargs = {**self.PICO_DEFAULTS, **pico_data}
             pico = PICOCriteria(**pico_kwargs)
 
             api = APIConfiguration(**api_data)
@@ -242,7 +245,7 @@ class ConfigurationManager:
                 template_data = json.load(f)
 
             # jsonschema validation requires an api_key, but templates omit it
-            temp_validate_data = json.loads(json.dumps(template_data))
+            temp_validate_data = copy.deepcopy(template_data)
             if 'api' in temp_validate_data and 'api_key' not in temp_validate_data['api']:
                 temp_validate_data['api']['api_key'] = 'placeholder'
 
@@ -289,15 +292,7 @@ class ConfigurationManager:
         
         # Additional custom validation
         try:
-            pico_defaults = {
-                'population': '',
-                'intervention': '',
-                'comparison': '',
-                'outcomes': '',
-                'time_frame': '',
-                'study_types': ''
-            }
-            pico_data = {**pico_defaults, **config_dict.get('pico', {})}
+            pico_data = {**self.PICO_DEFAULTS, **config_dict.get('pico', {})}
             pico = PICOCriteria(**pico_data)
             errors.extend(pico.validate())
         except TypeError as e:
