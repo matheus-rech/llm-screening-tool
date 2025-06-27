@@ -492,7 +492,7 @@ def process_article(article_id):
     )
 
     # Initialize screening orchestrator with dynamic configuration
-    import os
+    # import os # Move to top of file
     openai_key = os.getenv('OPENAI_API_KEY')
     anthropic_key = os.getenv('ANTHROPIC_API_KEY')
 
