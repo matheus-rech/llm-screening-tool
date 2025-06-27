@@ -1184,8 +1184,20 @@ function llmScreeningTool() {
                     this.addLog('Screening workflow started successfully!', 'text-green-400');
                     this.activeTab = 'screening';
                     // Refresh the page to show updated screening status
-                    setTimeout(() => {
-                        location.reload();
+                    setTimeout(async () => {
+                        try {
+                            const statusResponse = await fetch('/api/screening/status');
+                            if (statusResponse.ok) {
+                                const statusData = await statusResponse.json();
+                                this.screeningStatus = statusData.status;
+                                this.addLog('Screening status updated successfully!', 'text-green-400');
+                            } else {
+                                this.addLog('Failed to fetch screening status', 'text-red-400');
+                            }
+                        } catch (error) {
+                            console.error('Error fetching screening status:', error);
+                            this.addLog(`An error occurred: ${error.message}`, 'text-red-400');
+                        }
                     }, 1000);
                 } else {
                     const errorData = await response.json();
