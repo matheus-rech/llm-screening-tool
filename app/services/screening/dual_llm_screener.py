@@ -393,11 +393,13 @@ Be thorough, precise, and conservative in your assessments. When in doubt, err o
                         if "```json" in response_text:
                             json_start = response_text.find("```json") + 7
                             json_end = response_text.find("```", json_start)
-                            response_text = response_text[json_start:json_end].strip()
+                            if json_start != -1 and json_end != -1:
+                                response_text = response_text[json_start:json_end].strip()
                         elif "```" in response_text:
                             json_start = response_text.find("```") + 3
                             json_end = response_text.find("```", json_start)
-                            response_text = response_text[json_start:json_end].strip()
+                            if json_start != -1 and json_end != -1:
+                                response_text = response_text[json_start:json_end].strip()
 
                         result_dict = json.loads(response_text)
                         result = ComprehensiveScreeningResult(**result_dict)
