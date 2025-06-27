@@ -4,15 +4,16 @@ Initialize database tables for the LLM Screening Tool.
 """
 
 import os
+import logging
 from app import create_app, db
 
 def init_database():
     """Initialize database tables."""
     if not os.environ.get('ANTHROPIC_API_KEY'):
-        print("❌ ANTHROPIC_API_KEY environment variable not set")
+        logging.error("❌ ANTHROPIC_API_KEY environment variable not set")
         return False
     if not os.environ.get('OPENAI_API_KEY'):
-        print("❌ OPENAI_API_KEY environment variable not set")
+        logging.error("❌ OPENAI_API_KEY environment variable not set")
         return False
     
     app = create_app('development')
