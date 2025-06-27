@@ -728,24 +728,26 @@ def test_model_connection():
             if not api_key:
                 return jsonify({'success': False, 'status': 'Missing API Key', 'message': 'OpenAI API key required'})
             
-            from openai import OpenAI
+            from openai import OpenAI, APIError
             client = OpenAI(api_key=api_key)
             
-            test_response = client.chat.completions.create(
-                model=config_data['model_name'],
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": "Hello, this is a connection test. Please respond with 'Connection successful'."}
-                ],
-                max_tokens=10,
-                temperature=0.1
-            )
-            
-            if test_response and test_response.choices:
-                return jsonify({'success': True, 'status': 'Connected', 'message': 'OpenAI connection successful'})
-            else:
-                return jsonify({'success': False, 'status': 'Connection Failed', 'message': 'OpenAI API call failed'})
-            
+            try:
+                test_response = client.chat.completions.create(
+                    model=config_data['model_name'],
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": "Hello, this is a connection test. Please respond with 'Connection successful'."}
+                    ],
+                    max_tokens=10,
+                    temperature=0.1
+                )
+                
+                if test_response and test_response.choices:
+                    return jsonify({'success': True, 'status': 'Connected', 'message': 'OpenAI connection successful'})
+                else:
+                    return jsonify({'success': False, 'status': 'Connection Failed', 'message': 'OpenAI API call failed'})
+            except Exception as e:
+                return jsonify({'success': False, 'status': 'Connection Failed', 'message': f'OpenAI API error: {e}'})
         elif config_data['provider'] == 'anthropic':
             api_key = config_data.get('api_key') or current_app.config.get('ANTHROPIC_API_KEY')
             if not api_key:
