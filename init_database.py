@@ -20,20 +20,20 @@ def init_database():
     with app.app_context():
         try:
             db.create_all()
-            print("✅ Database tables created successfully")
+            logging.info("✅ Database tables created successfully")
             
             from app.models.screening_models import Project, Article
             projects = Project.query.all()
             articles = Article.query.all()
             
-            print(f"📊 Current database state:")
-            print(f"   Projects: {len(projects)}")
-            print(f"   Articles: {len(articles)}")
+            logging.info(f"📊 Current database state:")
+            logging.info(f"   Projects: {len(projects)}")
+            logging.info(f"   Articles: {len(articles)}")
             
             return True
             
         except Exception as e:
-            print(f"❌ Database initialization failed: {e}")
+            logging.error(f"❌ Database initialization failed: {e}")
             return False
 
 if __name__ == "__main__":
