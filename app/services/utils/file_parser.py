@@ -1,5 +1,6 @@
 import csv
 import io
+import os
 import re
 import rispy
 import bibtexparser
@@ -138,15 +139,15 @@ def parse_tsv_file(file_content: str) -> List[Dict]:
     return studies
 
 def parse_csv_file(file_content: str) -> List[Dict]:
-    """Parse a CSV file and return a list of study dictionaries."""
+    """Parse CSV data from a file path or raw content."""
     studies = []
-    # Accept either file content or a path to a CSV file
-    if "\n" not in file_content and os.path.exists(file_content):
-        with open(file_content, "r", encoding="utf-8") as f:
-            file_like_object = io.StringIO(f.read())
-    else:
-        file_like_object = io.StringIO(file_content)
 
+    # Allow passing a file path for convenience in tests
+    if os.path.exists(file_content) and "\n" not in file_content:
+        with open(file_content, "r", encoding="utf-8") as f:
+            file_content = f.read()
+
+    file_like_object = io.StringIO(file_content)
     reader = csv.DictReader(file_like_object)
     for row in reader:
         authors = row.get("authors", "")

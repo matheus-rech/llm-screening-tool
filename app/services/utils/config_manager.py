@@ -244,13 +244,10 @@ class ConfigurationManager:
             with open(template_path, 'r') as f:
                 template_data = json.load(f)
 
-            # jsonschema validation requires an api_key, but templates omit it
-            temp_validate_data = copy.deepcopy(template_data)
-            if 'api' in temp_validate_data and 'api_key' not in temp_validate_data['api']:
-                temp_validate_data['api']['api_key'] = 'placeholder'
-
-            jsonschema.validate(temp_validate_data, self.SCHEMA)
-
+            # Validate against schema (API key optional for templates)
+            template_schema = copy.deepcopy(self.SCHEMA)
+            template_schema["properties"]["api"]["required"] = []
+            jsonschema.validate(template_data, template_schema)
             return template_data
             
         except json.JSONDecodeError as e:
