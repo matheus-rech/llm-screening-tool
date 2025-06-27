@@ -77,8 +77,6 @@ def project_detail(project_id):
     project = Project.query.get_or_404(project_id)
     articles = Article.query.filter_by(project_id=project_id).order_by(Article.created_at.desc()).all()
     
-    session['current_project_id'] = project_id
-    
     # Calculate statistics
     total_articles = len(articles)
     processed_articles = len([a for a in articles if a.status != 'pending'])
