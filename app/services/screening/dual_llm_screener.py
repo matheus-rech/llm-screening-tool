@@ -272,7 +272,7 @@ Be thorough, precise, and conservative in your assessments. When in doubt, err o
 
         except Exception as e:
             logger.error(f"OpenAI screening failed: {e}")
-            raise APIError(f"OpenAI screening failed: {e}")
+            raise APIError(f"OpenAI screening failed: {e}") from e
 
     def _build_screening_prompt(self, abstract: str, title: str, criteria: ScreeningCriteria) -> str:
         """Build comprehensive screening prompt."""
