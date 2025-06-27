@@ -1,5 +1,6 @@
 import csv
 import io
+import os
 import re
 import rispy
 import bibtexparser
@@ -141,19 +142,25 @@ def parse_csv_file(file_content: str) -> List[Dict]:
     """Parse CSV content or file path into study dictionaries."""
     studies = []
 
-    # Security check: prevent path traversal attacks
+    # Check if input is a file path
     if os.path.exists(file_content):
-        # Check for path traversal patterns
-        if '..' not in file_content and not file_content.startswith('/'):
-            with open(file_content, "r", encoding="utf-8") as f:
-                file_content = f.read()
-        elif os.path.isabs(file_content) and '/tmp/' in file_content:
-            # Allow temporary files for testing
+        # Security check: prevent path traversal attacks
+        if ".." in file_content:
+            raise ValueError("Path traversal not allowed")
+        
+        # Allow relative paths and temp files (for testing)
+        if not os.path.isabs(file_content) or file_content.startswith('/tmp/'):
             with open(file_content, "r", encoding="utf-8") as f:
                 file_content = f.read()
         else:
-            # If it contains path traversal patterns, treat it as content
-            pass
+            # For absolute paths, ensure they're within allowed directories
+            resolved_path = os.path.abspath(file_content)
+            current_dir = os.path.abspath(".")
+            if resolved_path.startswith(current_dir):
+                with open(file_content, "r", encoding="utf-8") as f:
+                    file_content = f.read()
+            else:
+                raise ValueError("File path not allowed for security reasons")
 
     file_like_object = io.StringIO(file_content)
     reader = csv.DictReader(file_like_object)

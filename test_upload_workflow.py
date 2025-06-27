@@ -6,6 +6,7 @@ Tests file parsing, database integration, and article creation with proper statu
 
 import sys
 import os
+import pytest
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.services.utils.file_parser import parse_ris_file, parse_ris_manual, load_studies
@@ -30,6 +31,12 @@ def parse_studies_from_files():
                     studies = parse_ris_manual(content)
                 
                 enhanced_studies = load_studies(content, filename)
+                
+                # Normalize authors field to string if it's a list
+                for study in studies:
+                    authors = study.get('authors', '')
+                    if isinstance(authors, list):
+                        study['authors'] = ', '.join(authors)
                 
                 all_studies.extend(studies)
                 
@@ -86,6 +93,14 @@ def test_file_parsing():
                 print(f"   ❌ Error parsing {filename}: {e}")
                 continue
     
+    return all_studies
+
+def test_file_parsing():
+    """Test file parsing functionality with detailed output."""
+    print("🔬 Testing File Parsing")
+    print("-" * 40)
+    
+    all_studies = parse_studies_from_files()
     assert len(all_studies) > 0, "No studies were parsed from the test files"
 
 def test_database_integration():
