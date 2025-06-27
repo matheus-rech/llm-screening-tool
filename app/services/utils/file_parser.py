@@ -141,10 +141,12 @@ def parse_csv_file(file_content: str) -> List[Dict]:
     """Parse CSV content or file path into study dictionaries."""
     studies = []
 
-    basename = os.path.basename(file_content)
-    if basename == file_content and os.path.exists(basename):
-        with open(basename, "r", encoding="utf-8") as f:
-            file_content = f.read()
+    # Safely handle file paths by checking if it's a file and using basename
+    if os.path.exists(file_content) and os.path.isfile(file_content):
+        basename = os.path.basename(file_content)
+        if basename == os.path.basename(file_content):  # Ensure no directory traversal
+            with open(file_content, "r", encoding="utf-8") as f:
+                file_content = f.read()
 
     file_like_object = io.StringIO(file_content)
     reader = csv.DictReader(file_like_object)

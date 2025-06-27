@@ -13,11 +13,8 @@ from app.models.screening_models import db, Project, Article
 from app import create_app
 from datetime import datetime, timezone
 
-def test_file_parsing():
-    """Test file parsing functionality with detailed output."""
-    print("🔬 Testing File Parsing")
-    print("-" * 40)
-    
+def parse_studies_from_files():
+    """Helper function to parse studies from test files."""
     test_files = ['test_citation_data.ris', 'test_records.ris']
     all_studies = []
     
@@ -64,6 +61,14 @@ def test_file_parsing():
                 print(f"   ❌ Error parsing {filename}: {e}")
                 continue
     
+    return all_studies
+
+def test_file_parsing():
+    """Test file parsing functionality with detailed output."""
+    print("🔬 Testing File Parsing")
+    print("-" * 40)
+    
+    all_studies = parse_studies_from_files()
     assert len(all_studies) > 0, "No studies were parsed from the test files"
     return all_studies
 
@@ -72,7 +77,7 @@ def test_database_integration():
     print("\n🗄️  Testing Database Integration")
     print("-" * 40)
     
-    studies = test_file_parsing()
+    studies = parse_studies_from_files()
     try:
         app = create_app()
         app.config['TESTING'] = True
@@ -164,7 +169,7 @@ def test_complete_workflow():
     print(f"Test started at: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
     print("")
     
-    studies = test_file_parsing()
+    studies = parse_studies_from_files()
     
     if not studies:
         print("\n❌ No studies parsed - workflow test failed")
