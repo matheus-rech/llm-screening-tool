@@ -13,7 +13,7 @@ import logging
 import pandas as pd
 import rispy
 import bibtexparser
-from flask import Blueprint, render_template, request, redirect, url_for, send_from_directory, Response, stream_with_context, jsonify, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, send_from_directory, Response, stream_with_context, jsonify, send_file, session
 from werkzeug.utils import secure_filename
 
 from app.models.screening_models import db, Project, Article
@@ -76,6 +76,8 @@ def project_detail(project_id):
     """Show project details and articles."""
     project = Project.query.get_or_404(project_id)
     articles = Article.query.filter_by(project_id=project_id).order_by(Article.created_at.desc()).all()
+    
+    session['current_project_id'] = project_id
     
     # Calculate statistics
     total_articles = len(articles)

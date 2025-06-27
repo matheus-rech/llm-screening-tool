@@ -36,6 +36,9 @@ def create_app(config_name=None):
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+    
+    app.config['OPENAI_API_KEY'] = os.getenv('OPENAI_API_KEY')
+    app.config['ANTHROPIC_API_KEY'] = os.getenv('ANTHROPIC_API_KEY')
 
     # Configure logging for debugging
     if config_name == 'development':
