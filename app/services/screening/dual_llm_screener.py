@@ -841,6 +841,8 @@ class ScreeningResultsStore:
                               human_review_triggers: Dict) -> Dict:
         """Store comprehensive screening results."""
         
+        from flask import current_app
+        
         # Create comprehensive record
         screening_record = {
             'article_id': article_id,
@@ -862,24 +864,25 @@ class ScreeningResultsStore:
             'requires_human_review': human_review_triggers['should_review']
         }
         
-        # Update article in database
-        article = Article.query.get(article_id)
-        if article:
-            article.decision_reasoning = screening_record
-            
-            # Set article status based on consensus
-            if screening_record['requires_human_review']:
-                article.status = 'human_review_required'
-            else:
-                final_decision = screening_record['final_decision']
-                if final_decision == 'INCLUDE':
-                    article.status = 'included'
-                elif final_decision == 'EXCLUDE':
-                    article.status = 'excluded'
+        # Update article in database with Flask app context
+        with current_app.app_context():
+            article = Article.query.get(article_id)
+            if article:
+                article.decision_reasoning = screening_record
+                
+                # Set article status based on consensus
+                if screening_record['requires_human_review']:
+                    article.status = 'human_review_required'
                 else:
-                    article.status = 'uncertain'
-            
-            db.session.commit()
+                    final_decision = screening_record['final_decision']
+                    if final_decision == 'INCLUDE':
+                        article.status = 'included'
+                    elif final_decision == 'EXCLUDE':
+                        article.status = 'excluded'
+                    else:
+                        article.status = 'uncertain'
+                
+                db.session.commit()
         
         return screening_record
     
