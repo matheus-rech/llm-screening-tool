@@ -149,8 +149,10 @@ def parse_csv_file(file_content: str) -> List[Dict]:
         if ".." in file_content:
             raise ValueError("Path traversal not allowed")
         
+        import tempfile
         # Allow relative paths and temp files (for testing)
-        if not os.path.isabs(file_content) or file_content.startswith('/tmp/'):
+        temp_dir = tempfile.gettempdir()
+        if not os.path.isabs(file_content) or file_content.startswith(temp_dir):
             with open(file_content, "r", encoding="utf-8") as f:
                 file_content = f.read()
         else:

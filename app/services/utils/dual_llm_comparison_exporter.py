@@ -296,9 +296,10 @@ class DualLLMComparisonExporter:
         
         quality_metrics = self.calculate_quality_metrics(articles)
         
+        import tempfile
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{project_name}_dual_llm_comparison_{timestamp}.xlsx"
-        filepath = os.path.join('/tmp', filename)
+        filepath = os.path.join(tempfile.gettempdir(), filename)
         
         self._create_formatted_excel(df, filepath, quality_metrics)
         

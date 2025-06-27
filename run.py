@@ -25,6 +25,6 @@ if __name__ == '__main__':
     
     app.run(
         debug=debug,
-        host='0.0.0.0',
+        host='0.0.0.0',  # nosec B104 - Binding to all interfaces is required for containerized deployment
         port=port
     )
