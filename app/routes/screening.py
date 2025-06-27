@@ -594,7 +594,10 @@ def start_workflow():
     def run_workflow():
         """Run the async workflow in a separate thread with Flask app context."""
         try:
-            with current_app.app_context():
+            # Get the Flask app instance to use in the background thread
+            app = current_app._get_current_object()
+            
+            with app.app_context():
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 
@@ -607,8 +610,7 @@ def start_workflow():
                         logger.info(f"Workflow progress: {progress.current_status} - {progress.processed_articles}/{progress.total_articles} articles processed")
                         
                         if progress.processed_articles > 0:
-                            with current_app.app_context():
-                                pass
+                            pass
                 
                 loop.run_until_complete(execute())
                 logger.info(f"Workflow {workflow_id} completed successfully")
