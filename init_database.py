@@ -16,7 +16,8 @@ def init_database():
         logging.error("❌ OPENAI_API_KEY environment variable not set")
         return False
     
-    app = create_app('development')
+    config_name = os.environ.get('FLASK_CONFIG', 'development')
+    app = create_app(config_name)
     
     with app.app_context():
         try:
