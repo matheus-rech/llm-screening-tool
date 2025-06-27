@@ -261,7 +261,7 @@ def start_screening():
                                     'timestamp': datetime.now().isoformat(),
                                     'requires_human_review': True
                                 }
-                                db.session.commit()
+                                # db.session.commit() # Consider committing outside the loop or in batches
 
                         logger.info(f"Background processing completed: {processed_count}/{len(articles)} articles processed")
 
