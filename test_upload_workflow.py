@@ -6,6 +6,7 @@ Tests file parsing, database integration, and article creation with proper statu
 
 import sys
 import os
+import pytest
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.services.utils.file_parser import parse_ris_file, parse_ris_manual, load_studies
@@ -66,6 +67,11 @@ def test_file_parsing():
     
     assert len(all_studies) > 0, "No studies were parsed from the test files"
     return all_studies
+
+@pytest.fixture
+def studies():
+    """Fixture that returns parsed studies for database tests."""
+    return test_file_parsing()
 
 def test_database_integration(studies=None):
     """Test database integration with parsed studies."""

@@ -8,6 +8,7 @@ from lxml import etree
 from Bio import Entrez, Medline
 from typing import List, Dict, Optional, Tuple
 import operator
+import os
 try:
     from nltk.metrics import edit_distance
 except ImportError:
