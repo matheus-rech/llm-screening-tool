@@ -67,10 +67,12 @@ def test_file_parsing():
     assert len(all_studies) > 0, "No studies were parsed from the test files"
     return all_studies
 
-def test_database_integration(studies):
+def test_database_integration():
     """Test database integration with parsed studies."""
     print("\n🗄️  Testing Database Integration")
     print("-" * 40)
+
+    studies = test_file_parsing()
     
     try:
         app = create_app()
@@ -171,7 +173,7 @@ def test_complete_workflow():
     
     print(f"\n✅ File parsing successful: {len(studies)} studies parsed")
     
-    db_success = test_database_integration(studies)
+    db_success = test_database_integration()
     
     if not db_success:
         print("\n❌ Database integration failed - workflow test failed")

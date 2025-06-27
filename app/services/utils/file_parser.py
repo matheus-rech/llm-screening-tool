@@ -1,6 +1,7 @@
 import csv
 import io
 import re
+import os
 import rispy
 import bibtexparser
 from lxml import etree
@@ -138,6 +139,9 @@ def parse_tsv_file(file_content: str) -> List[Dict]:
 
 def parse_csv_file(file_content: str) -> List[Dict]:
     studies = []
+    if os.path.isfile(file_content):
+        with open(file_content, 'r', encoding='utf-8') as f:
+            file_content = f.read()
     file_like_object = io.StringIO(file_content)
     reader = csv.DictReader(file_like_object)
     for row in reader:

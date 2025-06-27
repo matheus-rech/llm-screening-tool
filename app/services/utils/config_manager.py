@@ -4,6 +4,7 @@ import json
 import os
 from typing import Dict, Any, List, Optional, Union
 from dataclasses import dataclass, asdict
+import copy
 from pathlib import Path
 import jsonschema
 from datetime import datetime
@@ -16,8 +17,8 @@ class PICOCriteria:
     intervention: str
     comparison: str
     outcomes: str
-    time_frame: str
-    study_types: str
+    time_frame: str = ""
+    study_types: str = ""
     
     def validate(self) -> List[str]:
         """Validate PICO criteria and return list of errors."""
@@ -155,6 +156,9 @@ class ConfigurationManager:
         },
         "required": ["name", "pico", "api"]
     }
+
+    TEMPLATE_SCHEMA = copy.deepcopy(SCHEMA)
+    TEMPLATE_SCHEMA["properties"]["api"]["required"] = []
     
     def __init__(self, template_dir: str = "config_templates"):
         self.template_dir = Path(template_dir)
@@ -230,8 +234,8 @@ class ConfigurationManager:
             with open(template_path, 'r') as f:
                 template_data = json.load(f)
             
-            # Validate against schema
-            jsonschema.validate(template_data, self.SCHEMA)
+            # Validate against a relaxed schema that allows missing API keys
+            jsonschema.validate(template_data, self.TEMPLATE_SCHEMA)
             
             return template_data
             
