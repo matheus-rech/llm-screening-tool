@@ -1,0 +1,19 @@
+Debug print statement in ./verify_fix.py
+Debug print statement in ./desktop_app.py
+Debug print statement in ./gui_app.py
+TODO found in ./production_readiness_audit.py
+FIXME found in ./production_readiness_audit.py
+Debug print statement in ./production_readiness_audit.py
+Debug print statement in ./check_db.py
+Debug print statement in ./run.py
+Debug print statement in ./clean_mock_data.py
+Debug print statement in ./check_requirements_syntax.py
+Debug print statement in ./check_project.py
+TODO found in ./app/__init__.py
+Debug print statement in ./app/__init__.py
+Debug print statement in ./app/services/utils/file_parser.py
+Debug print statement in ./app/routes/analytics.py
+Debug print statement in ./app/routes/main.py
+Debug print statement in ./app/routes/enhanced.py
+TODO found in ./app/routes/screening.py
+Debug print statement in ./app/routes/screening.py
