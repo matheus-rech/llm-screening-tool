@@ -81,7 +81,7 @@ class ScreeningWorkflowOrchestrator:
                                        config: WorkflowConfig) -> AsyncGenerator[WorkflowProgress, None]:
         """Execute screening workflow with real-time progress updates."""
         
-        # Get articles to process
+        # Get articles to process (will be called within Flask app context from thread)
         articles = self._get_articles_for_processing(project_id)
         
         if not articles:
