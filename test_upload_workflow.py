@@ -6,6 +6,7 @@ Tests file parsing, database integration, and article creation with proper statu
 
 import sys
 import os
+import pytest
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.services.utils.file_parser import parse_ris_file, parse_ris_manual, load_studies
@@ -19,6 +20,39 @@ def parse_studies_from_files():
     all_studies = []
     
     for filename in test_files:
+        if os.path.exists(filename):
+            try:
+                with open(filename, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                studies = parse_ris_file(content)
+                
+                if len(studies) == 0:
+                    studies = parse_ris_manual(content)
+                
+                enhanced_studies = load_studies(content, filename)
+                
+                # Normalize authors field to string if it's a list
+                for study in studies:
+                    authors = study.get('authors', '')
+                    if isinstance(authors, list):
+                        study['authors'] = ', '.join(authors)
+                
+                all_studies.extend(studies)
+                
+            except Exception as e:
+                continue
+    
+    return all_studies
+
+def test_file_parsing():
+    """Test file parsing functionality with detailed output."""
+    print("🔬 Testing File Parsing")
+    print("-" * 40)
+    
+    all_studies = parse_studies_from_files()
+    
+    for filename in ['test_citation_data.ris', 'test_records.ris']:
         if os.path.exists(filename):
             print(f"\n📄 Testing file: {filename}")
             
@@ -54,8 +88,6 @@ def parse_studies_from_files():
                         print(f"      ✅ Authors converted to string: {authors}")
                     else:
                         print(f"      ✅ Authors already string: {type(authors)}")
-                
-                all_studies.extend(studies)
                 
             except Exception as e:
                 print(f"   ❌ Error parsing {filename}: {e}")
