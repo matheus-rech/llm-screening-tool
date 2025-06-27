@@ -161,7 +161,7 @@ def start_screening():
 
             if pending_count > 0:
                 # Start background processing
-                from threading import Thread
+                # from threading import Thread # Move to top of file
 
                 def process_articles_background():
                     """Background processing of articles."""
