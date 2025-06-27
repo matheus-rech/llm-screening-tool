@@ -3,7 +3,14 @@
         window.__firebase_config = firebaseConfig;
         window.__initial_auth_token = initialAuthToken;
         window.__app_id = appId;
-            })("\n{\n  \"apiKey\": \"AIzaSyCqyCcs2R2e7AegGjvFAwG98wlamtbHvZY\",\n  \"authDomain\": \"bard-frontend.firebaseapp.com\",\n  \"projectId\": \"bard-frontend\",\n  \"storageBucket\": \"bard-frontend.firebasestorage.app\",\n  \"messagingSenderId\": \"175205271074\",\n  \"appId\": \"1:175205271074:web:2b7bd4d34d33bf38e6ec7b\"\n}\n","eyJhbGciOiJSUzI1NiIsImtpZCI6IjhkZDUxMTBhMGIwYjdkNDJhNDM2ODg4MzdmODg5M2M2OTNhM2RhNDMiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJmaXJlYmFzZS1hZG1pbnNkay1mYnN2Y0BiYXJkLWZyb250ZW5kLmlhbS5nc2VydmljZWFjY291bnQuY29tIiwiYXVkIjoiaHR0cHM6XC9cL2lkZW50aXR5dG9vbGtpdC5nb29nbGVhcGlzLmNvbVwvZ29vZ2xlLmlkZW50aXR5LmlkZW50aXR5dG9vbGtpdC52MS5JZGVudGl0eVRvb2xraXQiLCJ1aWQiOiIwNzczOTU2NjA1OTUwODYxMDI3NyIsImFwcElkIjoiYWY0NjE0MzVjNzk5LWxsbV9zY3JlZW5pbmdfdG9vbC00NTYiLCJpc3MiOiJmaXJlYmFzZS1hZG1pbnNkay1mYnN2Y0BiYXJkLWZyb250ZW5kLmlhbS5nc2VydmljZWFjY291bnQuY29tIiwiZXhwIjoxNzUwNjI2MDAxLCJpYXQiOjE3NTA2MjI0MDEsImFsZyI6IlJTMjU2In0.djPtsA9GQfomHnkfIxcRT1JQ49nthg4ez69BfozIyI7WKVjEROxproca_6UyjmVOhEc4QnYwkneA9TvY5ohg7m5CElKgKsp-sYlnpGch4QXaAFMP4vjmtPCuUzPZJsa_jDyThiWn48q1-s-fwBbOSmabUitfpcjCEzg8qSnko4t8NUm1ZP0lsLscUEFDxpQyIwv75H9wWfKEaJ_5MxObH0X7kucRtqJ_dYQZ6fFn5U5s-UTz9OrzAXTMoWyglitW8QbpIQzIcjQ5faD8y3rcD9oq1hy-BWiCJWCuDsWdcd1SY3kgkzqINEkAuf5Po8L0z3EXUOITCzXuofZjIUXRTw","af461435c799-llm_screening_tool-456")</script><script>(function() {
+            })(
+                // Firebase config should be loaded from environment variables
+                window.FIREBASE_CONFIG || {},
+                // Auth token should be obtained securely at runtime
+                window.INITIAL_AUTH_TOKEN || null,
+                // App ID should be configured via environment
+                window.APP_ID || "llm_screening_tool"
+            )</script><script>(function() {
   // Ensure this script is executed only once
   if (window.firebaseAuthBridgeScriptLoaded) {
     return;
