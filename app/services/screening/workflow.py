@@ -324,15 +324,16 @@ class ScreeningWorkflowOrchestrator:
             openai_result, anthropic_result
         )
         
-        # Store results
-        screening_record = self.results_store.store_screening_results(
-            article.id,
-            project_id,
-            openai_result,
-            anthropic_result,
-            agreement_analysis,
-            human_review_triggers
-        )
+        # Store results with Flask app context
+        with current_app.app_context():
+            screening_record = self.results_store.store_screening_results(
+                article.id,
+                project_id,
+                openai_result,
+                anthropic_result,
+                agreement_analysis,
+                human_review_triggers
+            )
         
         return screening_record
     
