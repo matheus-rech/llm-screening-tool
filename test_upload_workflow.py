@@ -67,11 +67,14 @@ def test_file_parsing():
     assert len(all_studies) > 0, "No studies were parsed from the test files"
     return all_studies
 
-def test_database_integration(studies):
+def test_database_integration(studies=None):
     """Test database integration with parsed studies."""
     print("\n🗄️  Testing Database Integration")
     print("-" * 40)
     
+    if studies is None:
+        studies = test_file_parsing()
+
     try:
         app = create_app()
         app.config['TESTING'] = True
