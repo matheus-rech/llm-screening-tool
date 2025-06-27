@@ -17,8 +17,8 @@ class PICOCriteria:
     intervention: str
     comparison: str
     outcomes: str
-    time_frame: str
-    study_types: str
+    time_frame: str = ""
+    study_types: str = ""
     
     def validate(self) -> List[str]:
         """Validate PICO criteria and return list of errors."""
@@ -150,8 +150,8 @@ class ConfigurationManager:
                     "max_retries": {"type": "integer", "minimum": 0},
                     "timeout": {"type": "integer", "minimum": 1},
                     "max_tokens": {"type": ["integer", "null"], "minimum": 1}
-                },
-                "required": ["api_key"]
+                }
+                # api_key optional for templates; validation ensures requirement
             },
             "processing": {
                 "type": "object",
@@ -209,7 +209,7 @@ class ConfigurationManager:
             return config
             
         except TypeError as e:
-            # Dataclass construction failed due to missing or invalid fields
+Research
             raise ValidationError(f"Invalid configuration data: {e}")
     
     def save_template(self, config: ProjectConfiguration, template_name: str) -> str:
