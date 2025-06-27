@@ -359,13 +359,13 @@ ER  -
             else:
                 print("⚠️ Some tests failed - review issues above")
 
-            return all_passed
+            assert all_passed, "Some dual LLM workflow tests failed"
 
     except Exception as e:
         print(f"❌ Test failed with error: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        assert False, f"Test failed with error: {e}"
 
 def test_api_key_configuration():
     """Test API key configuration and validation."""
@@ -382,11 +382,11 @@ def test_api_key_configuration():
     if openai_key and anthropic_key:
         print("✅ Both API keys are configured")
         print("🚀 System ready for live LLM screening")
-        return True
+        assert True  # Test passes when both keys are configured
     else:
         print("⚠️ API keys not configured - using mock mode")
         print("💡 Set OPENAI_API_KEY and ANTHROPIC_API_KEY for live testing")
-        return False
+        # This is not a failure condition, just a different test state
 
 if __name__ == "__main__":
     print("🚀 Starting Dual LLM Functionality Test")

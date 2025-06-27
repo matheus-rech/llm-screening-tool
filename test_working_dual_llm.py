@@ -188,16 +188,16 @@ def test_working_dual_llm():
                         print(f"✅ Agreement analysis completed")
                         print(f"✅ Results saved to database")
 
-                        return True
+                        assert True  # Test passes
                     else:
                         print("❌ Missing results from one or both LLMs")
-                        return False
+                        assert False, "Test failed"
 
                 except Exception as e:
                     print(f"❌ Screening failed: {e}")
                     import traceback
                     traceback.print_exc()
-                    return False
+                    assert False, "Test failed"
 
             else:
                 print("⚠️ API keys not found")
@@ -241,13 +241,13 @@ def test_working_dual_llm():
                 print(f"✅ Simulation completed successfully")
                 print(f"✅ Article status: {article.status}")
 
-                return True
+                assert True  # Test passes
 
     except Exception as e:
         print(f"❌ Test failed: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        assert False, "Test failed"
 
 def test_api_connections():
     """Test API connections directly."""

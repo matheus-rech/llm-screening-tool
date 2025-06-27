@@ -217,27 +217,27 @@ def test_final_dual_llm():
                         print(f"OpenAI Outcomes: {', '.join(openai_result.picott_extraction.outcomes)}")
                         print(f"Anthropic Outcomes: {', '.join(anthropic_result.picott_extraction.outcomes)}")
 
-                        return True
+                        assert True  # Test passes when both screenings succeed
                     else:
                         print("❌ One or both LLM screenings failed")
-                        return False
+                        assert False, "One or both LLM screenings failed"
 
                 except Exception as e:
                     print(f"❌ Screening failed: {e}")
                     import traceback
                     traceback.print_exc()
-                    return False
+                    assert False, f"Screening failed: {e}"
 
             else:
                 print("⚠️ API keys not found - cannot run live demonstration")
                 print("💡 Set OPENAI_API_KEY and ANTHROPIC_API_KEY environment variables")
-                return False
+                # This is not a failure condition, just skip the test
 
     except Exception as e:
         print(f"❌ Test failed: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        assert False, f"Test failed: {e}"
 
 def show_system_summary():
     """Show summary of the dual LLM system capabilities."""

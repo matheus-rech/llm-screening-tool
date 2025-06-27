@@ -52,14 +52,14 @@ def test_imports():
         from Bio import Entrez
         print("✅ File parsing libraries imported successfully")
 
-        return True
+        assert True  # Test passes when all imports succeed
 
     except ImportError as e:
         print(f"❌ Import error: {e}")
-        return False
+        assert False, f"Import error: {e}"
     except Exception as e:
         print(f"❌ Unexpected error during imports: {e}")
-        return False
+        assert False, f"Unexpected error during imports: {e}"
 
 def test_app_structure():
     """Test that the app structure is correct."""
@@ -85,10 +85,10 @@ def test_app_structure():
 
     if missing_files:
         print(f"❌ Missing files: {missing_files}")
-        return False
+        assert False, f"Missing files: {missing_files}"
 
     print("✅ All required files present")
-    return True
+    assert True  # Test passes when all files are present
 
 def test_app_models():
     """Test that database models can be imported and initialized."""
@@ -107,21 +107,21 @@ def test_app_models():
                 print(f"✅ Project.{field} exists")
             else:
                 print(f"❌ Project.{field} missing")
-                return False
+                assert False, "Test failed"
 
         for field in article_fields:
             if hasattr(Article, field):
                 print(f"✅ Article.{field} exists")
             else:
                 print(f"❌ Article.{field} missing")
-                return False
+                assert False, "Test failed"
 
-        return True
+        assert True  # Test passes
 
     except Exception as e:
         print(f"❌ Error testing models: {e}")
         traceback.print_exc()
-        return False
+        assert False, "Test failed"
 
 def test_dual_llm_screener():
     """Test the dual LLM screener implementation."""
@@ -166,12 +166,12 @@ def test_dual_llm_screener():
         except Exception as e:
             print(f"⚠️ Orchestrator initialization warning: {e}")
 
-        return True
+        assert True  # Test passes
 
     except Exception as e:
         print(f"❌ Error testing dual LLM screener: {e}")
         traceback.print_exc()
-        return False
+        assert False, "Test failed"
 
 def test_enhanced_systematic_review():
     """Test the enhanced systematic review implementation."""
@@ -212,12 +212,12 @@ def test_enhanced_systematic_review():
         except Exception as e:
             print(f"⚠️ Context-aware orchestrator warning: {e}")
 
-        return True
+        assert True  # Test passes
 
     except Exception as e:
         print(f"❌ Error testing enhanced systematic review: {e}")
         traceback.print_exc()
-        return False
+        assert False, "Test failed"
 
 def test_file_parser():
     """Test file parsing functionality."""
@@ -263,12 +263,12 @@ ER  -
         else:
             print("⚠️ RIS parsing returned no studies")
 
-        return True
+        assert True  # Test passes
 
     except Exception as e:
         print(f"❌ Error testing file parser: {e}")
         traceback.print_exc()
-        return False
+        assert False, "Test failed"
 
 def test_flask_routes():
     """Test Flask routes and app initialization."""
@@ -306,12 +306,12 @@ def test_flask_routes():
                 else:
                     print(f"⚠️ Route not found: {method} {path}")
 
-        return True
+        assert True  # Test passes
 
     except Exception as e:
         print(f"❌ Error testing Flask routes: {e}")
         traceback.print_exc()
-        return False
+        assert False, "Test failed"
 
 def test_environment_variables():
     """Test environment variable configuration."""
@@ -339,9 +339,9 @@ def test_environment_variables():
                 print(f"❌ {var} not documented in .env.example")
     else:
         print("❌ .env.example file not found")
-        return False
+        assert False, "Test failed"
 
-    return True
+    assert True  # Test passes
 
 def test_database_schema():
     """Test database schema and migrations."""
@@ -399,12 +399,12 @@ def test_database_schema():
             articles = Article.query.all()
             print(f"✅ Database queries work: {len(projects)} projects, {len(articles)} articles")
 
-        return True
+        assert True  # Test passes
 
     except Exception as e:
         print(f"❌ Error testing database schema: {e}")
         traceback.print_exc()
-        return False
+        assert False, "Test failed"
 
 def test_api_key_validation():
     """Test API key validation without making actual API calls."""
@@ -423,12 +423,12 @@ def test_api_key_validation():
         anthropic_provider = AnthropicProvider("test-key")
         print("✅ Providers accept API key format")
 
-        return True
+        assert True  # Test passes
 
     except Exception as e:
         print(f"❌ Error testing API key validation: {e}")
         traceback.print_exc()
-        return False
+        assert False, "Test failed"
 
 def run_comprehensive_test():
     """Run all tests and provide a summary."""

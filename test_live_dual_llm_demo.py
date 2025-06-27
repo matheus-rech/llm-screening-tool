@@ -383,16 +383,16 @@ def test_live_dual_llm_screening():
                 else:
                     print("🚀 Live LLM screening completed successfully!")
 
-                return True
+                assert True  # Test passes when demonstration completes
             else:
                 print("❌ Some validations failed")
-                return False
+                assert False, "Some validations failed"
 
     except Exception as e:
         print(f"❌ Demo failed with error: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        assert False, f"Demo failed with error: {e}"
 
 if __name__ == "__main__":
     print("🚀 Starting Live Dual LLM Demonstration")
