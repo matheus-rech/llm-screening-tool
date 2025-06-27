@@ -119,7 +119,7 @@ def start_screening():
             inclusion_criteria=data['inclusionCriteria'],
             exclusion_criteria=data['exclusionCriteria'],
             temperature=float(data['llmConfig'].get('temperature', 0.1)),
-            seed=int(data['llmConfig']['seed']) if data['llmConfig'].get('seed') else None,
+            seed=int(data['llmConfig']['seed']) if data['llmConfig'].get('seed') is not None and str(data['llmConfig']['seed']).isdigit() else None,
             openai_model=data['llmConfig'].get('openaiModel', 'gpt-4o'),
             anthropic_model=data['llmConfig'].get('anthropicModel', 'claude-3-5-sonnet-20241022')
         )
