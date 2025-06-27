@@ -570,25 +570,61 @@ def start_workflow():
         max_budget=data.get('max_budget')
     )
     
-    # Start workflow (simplified - in production this would be async)
+    # Start workflow with actual execution
     import os
+    import threading
+    import asyncio
+    
     orchestrator = ScreeningWorkflowOrchestrator(
         openai_api_key=os.getenv('OPENAI_API_KEY'),
         anthropic_api_key=os.getenv('ANTHROPIC_API_KEY')
     )
     
     # Store workflow status
+    workflow_id = f"{project_id}-{datetime.now().timestamp()}"
     session['active_workflow'] = {
         'project_id': project_id,
+        'workflow_id': workflow_id,
         'started_at': datetime.now().isoformat(),
         'workflow_type': workflow_type
     }
     
     logger.info(f"Workflow started for project {project_id} with type {workflow_type}")
     
+    def run_workflow():
+        """Run the async workflow in a separate thread with Flask app context."""
+        try:
+            with current_app.app_context():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                async def execute():
+                    async for progress in orchestrator.execute_screening_workflow(
+                        project_id=str(project_id),
+                        criteria=criteria,
+                        config=workflow_config
+                    ):
+                        logger.info(f"Workflow progress: {progress.current_status} - {progress.processed_articles}/{progress.total_articles} articles processed")
+                        
+                        if progress.processed_articles > 0:
+                            with current_app.app_context():
+                                pass
+                
+                loop.run_until_complete(execute())
+                logger.info(f"Workflow {workflow_id} completed successfully")
+                
+        except Exception as e:
+            logger.error(f"Workflow {workflow_id} failed: {str(e)}")
+        finally:
+            loop.close()
+    
+    # Start workflow in background thread
+    workflow_thread = threading.Thread(target=run_workflow, daemon=True)
+    workflow_thread.start()
+    
     return jsonify({
         'success': True,
-        'workflow_id': f"{project_id}-{datetime.now().timestamp()}",
+        'workflow_id': workflow_id,
         'message': 'Workflow started successfully'
     })
 

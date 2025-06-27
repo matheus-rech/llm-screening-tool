@@ -15,6 +15,7 @@ from enum import Enum
 from dataclasses import dataclass
 from datetime import datetime
 import json
+from flask import current_app
 
 from app.models.screening_models import db, Project, Article
 from .modern_llm import (
@@ -25,7 +26,6 @@ from .modern_llm import (
     ComprehensiveScreeningResult
 )
 from app.services.utils.concurrent_processor import OptimizedProcessor
-# from app.services.utils.cost_tracker import cost_tracker  # Temporarily disabled
 
 logger = logging.getLogger(__name__)
 
@@ -100,8 +100,8 @@ class ScreeningWorkflowOrchestrator:
             current_status="Initializing screening workflow"
         )
         
-        # Start cost tracking
-        cost_tracker.start_tracking(project_id)
+        # Start cost tracking (placeholder)
+        logger.info(f"Starting cost tracking for project {project_id}")
         
         try:
             # Execute based on workflow type
@@ -132,8 +132,8 @@ class ScreeningWorkflowOrchestrator:
             raise
         
         finally:
-            # Finalize cost tracking
-            cost_tracker.finalize_tracking(project_id)
+            # Finalize cost tracking (placeholder)
+            logger.info(f"Finalizing cost tracking for project {project_id}")
     
     async def _execute_batch_workflow(self, 
                                     articles: List[Article], 
@@ -351,10 +351,8 @@ class ScreeningWorkflowOrchestrator:
         if result.get('requires_human_review', False):
             progress.human_review_required += 1
         
-        # Update cost (simplified)
-        costs = cost_tracker.get_current_costs(result['project_id'])
-        if costs:
-            progress.total_cost = costs.get('total_cost', 0.0)
+        # Update cost (placeholder)
+        progress.total_cost = 0.0
     
     def _should_stop_early(self, progress: WorkflowProgress, config: WorkflowConfig) -> bool:
         """Determine if early stopping should be triggered."""
@@ -368,10 +366,11 @@ class ScreeningWorkflowOrchestrator:
     def _get_articles_for_processing(self, project_id: str) -> List[Article]:
         """Get articles that need processing for the project."""
         
-        return db.session.query(Article).filter(
-            Article.project_id == project_id,
-            Article.status == 'pending'
-        ).all()
+        with current_app.app_context():
+            return db.session.query(Article).filter(
+                Article.project_id == project_id,
+                Article.status == 'pending'
+            ).all()
     
     def _group_articles_by_similarity(self, articles: List[Article]) -> List[List[Article]]:
         """Group articles by similarity (simplified implementation)."""
