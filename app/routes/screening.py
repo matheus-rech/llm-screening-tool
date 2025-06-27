@@ -728,18 +728,45 @@ def test_model_connection():
             if not api_key:
                 return jsonify({'success': False, 'status': 'Missing API Key', 'message': 'OpenAI API key required'})
             
-            from app.services.screening.dual_llm_screener import OpenAIProvider
-            provider = OpenAIProvider(api_key, model_config)
-            return jsonify({'success': True, 'status': 'Connected', 'message': 'OpenAI connection successful'})
+            from openai import OpenAI
+            client = OpenAI(api_key=api_key)
+            
+            test_response = client.chat.completions.create(
+                model=config_data['model_name'],
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": "Hello, this is a connection test. Please respond with 'Connection successful'."}
+                ],
+                max_tokens=10,
+                temperature=0.1
+            )
+            
+            if test_response and test_response.choices:
+                return jsonify({'success': True, 'status': 'Connected', 'message': 'OpenAI connection successful'})
+            else:
+                return jsonify({'success': False, 'status': 'Connection Failed', 'message': 'OpenAI API call failed'})
             
         elif config_data['provider'] == 'anthropic':
             api_key = config_data.get('api_key') or current_app.config.get('ANTHROPIC_API_KEY')
             if not api_key:
                 return jsonify({'success': False, 'status': 'Missing API Key', 'message': 'Anthropic API key required'})
             
-            from app.services.screening.dual_llm_screener import AnthropicProvider
-            provider = AnthropicProvider(api_key, model_config)
-            return jsonify({'success': True, 'status': 'Connected', 'message': 'Anthropic connection successful'})
+            from anthropic import Anthropic
+            client = Anthropic(api_key=api_key)
+            
+            test_response = client.messages.create(
+                model=config_data['model_name'],
+                max_tokens=10,
+                temperature=0.1,
+                messages=[
+                    {"role": "user", "content": "Hello, this is a connection test. Please respond with 'Connection successful'."}
+                ]
+            )
+            
+            if test_response and test_response.content:
+                return jsonify({'success': True, 'status': 'Connected', 'message': 'Anthropic connection successful'})
+            else:
+                return jsonify({'success': False, 'status': 'Connection Failed', 'message': 'Anthropic API call failed'})
         
         else:
             return jsonify({'success': True, 'status': 'Local Model', 'message': f'{config_data["provider"]} configured'})
@@ -815,9 +842,7 @@ def list_templates():
 def get_project_statistics(project_id):
     """Get project statistics for PRISMA flowchart."""
     try:
-        from app.models.project import Project
-        from app.models.article import Article
-        from app.models.screening_models import PublicationSource
+        from app.models.screening_models import Project, Article, PublicationSource
         
         project = Project.query.get_or_404(project_id)
         

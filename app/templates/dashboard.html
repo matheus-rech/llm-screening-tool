@@ -292,7 +292,7 @@
                         <button @click="activeTab = 'configuration'" class="block w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg text-sm font-medium">
                             Configure PICO
                         </button>
-                        <button @click="activeTab = 'screening'" class="block w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm font-medium">
+                        <button @click="startScreening()" class="block w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-sm font-medium">
                             Start Screening
                         </button>
                     </div>
@@ -563,11 +563,11 @@
                     <div class="card mb-4">
                         <div class="card-header"><h3 class="text-lg font-semibold">Statistics</h3></div>
                         <div class="p-4 space-y-2 text-sm">
-                            <p>Total References: <span class="font-bold float-right">1500</span></p>
-                            <p>Processed: <span class="font-bold float-right">750 / 1500 (50%)</span></p>
-                            <p>Included: <span class="font-bold float-right text-green-400">50</span></p>
-                            <p>Excluded: <span class="font-bold float-right text-red-400">680</span></p>
-                            <p>Conflict: <span class="font-bold float-right text-yellow-400">20</span></p>
+                            <p>Total References: <span class="font-bold float-right" x-text="projectStats.total_articles || 0"></span></p>
+                            <p>Processed: <span class="font-bold float-right" x-text="`${projectStats.screened_articles || 0} / ${projectStats.total_articles || 0} (${projectStats.total_articles > 0 ? Math.round((projectStats.screened_articles / projectStats.total_articles) * 100) : 0}%)`"></span></p>
+                            <p>Included: <span class="font-bold float-right text-green-400" x-text="projectStats.included_articles || 0"></span></p>
+                            <p>Excluded: <span class="font-bold float-right text-red-400" x-text="projectStats.excluded_articles || 0"></span></p>
+                            <p>Pending: <span class="font-bold float-right text-yellow-400" x-text="projectStats.pending_articles || 0"></span></p>
                         </div>
                     </div>
                     <div class="card mb-4">
@@ -887,6 +887,10 @@ function llmScreeningTool() {
             
             // Initialize system logging
             this.addLog('System initialized. Ready for screening.', 'text-green-400');
+            
+            // Load project statistics
+            this.loadProjectStatistics();
+            
             setInterval(() => {
                 const now = new Date();
                 if (now.getSeconds() % 15 === 0) {
@@ -895,6 +899,13 @@ function llmScreeningTool() {
             }, 1000);
         },
         cachedPrismaStats: null,
+        projectStats: {
+            total_articles: 0,
+            screened_articles: 0,
+            included_articles: 0,
+            excluded_articles: 0,
+            pending_articles: 0
+        },
         model1: { 
             provider: 'anthropic',
             model_name: 'claude-3-5-sonnet-20241022',
@@ -968,7 +979,7 @@ function llmScreeningTool() {
             this.addLog(`Testing connection for ${model}...`, 'text-yellow-400');
 
             // Call the backend API to test connection
-            fetch('/api/config/test-connection', {
+            fetch('/api/screening/config/test-connection', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1091,6 +1102,128 @@ function llmScreeningTool() {
             this.saveTimeout = setTimeout(() => {
                 this.saveConfiguration();
             }, 1000); // Debounce saves by 1 second
+        },
+
+        async startScreening() {
+            this.addLog('Starting screening workflow...', 'text-blue-400');
+            
+            // Collect PICO-TT configuration data from the form
+            const researchQuestion = document.querySelector('textarea[placeholder*="research question"]')?.value || '';
+            const population = document.querySelector('textarea[placeholder*="Population"]')?.value || '';
+            const intervention = document.querySelector('textarea[placeholder*="Intervention"]')?.value || '';
+            const comparison = document.querySelector('textarea[placeholder*="Comparison"]')?.value || '';
+            const outcomes = document.querySelector('textarea[placeholder*="Outcomes"]')?.value || '';
+            const timeFrame = document.querySelector('textarea[placeholder*="Time Frame"]')?.value || '';
+            const studyTypes = document.querySelector('textarea[placeholder*="Study Types"]')?.value || '';
+            
+            // Collect inclusion and exclusion criteria
+            const inclusionCriteria = Array.from(document.querySelectorAll('input[placeholder*="Criterion"]'))
+                .filter(input => input.closest('div').querySelector('h3')?.textContent.includes('Inclusion'))
+                .map(input => input.value).filter(val => val.trim());
+            
+            const exclusionCriteria = Array.from(document.querySelectorAll('input[placeholder*="Criterion"]'))
+                .filter(input => input.closest('div').querySelector('h3')?.textContent.includes('Exclusion'))
+                .map(input => input.value).filter(val => val.trim());
+            
+            // Prepare screening configuration
+            const config = {
+                researchQuestion: researchQuestion,
+                picott: {
+                    population: population,
+                    intervention: intervention,
+                    comparison: comparison,
+                    outcomes: outcomes,
+                    timeFrame: timeFrame,
+                    studyTypes: studyTypes
+                },
+                inclusionCriteria: inclusionCriteria,
+                exclusionCriteria: exclusionCriteria,
+                llmConfig: {
+                    model1: {
+                        provider: this.model1.provider,
+                        model_name: this.model1.model_name,
+                        temperature: this.model1.temperature,
+                        seed: this.model1.seed,
+                        api_key: this.model1.api_key
+                    },
+                    model2: {
+                        provider: this.model2.provider,
+                        model_name: this.model2.model_name,
+                        temperature: this.model2.temperature,
+                        seed: this.model2.seed,
+                        api_key: this.model2.api_key
+                    }
+                }
+            };
+            
+            // Validate required fields
+            if (!researchQuestion.trim()) {
+                this.addLog('Please enter a research question before starting screening', 'text-red-400');
+                this.activeTab = 'configuration';
+                return;
+            }
+            
+            if (!population.trim() || !intervention.trim()) {
+                this.addLog('Please fill in at least Population and Intervention criteria', 'text-red-400');
+                this.activeTab = 'configuration';
+                return;
+            }
+            
+            // Save configuration and start screening
+            try {
+                const response = await fetch('/api/screening/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    this.addLog('Screening workflow started successfully!', 'text-green-400');
+                    this.activeTab = 'screening';
+                    // Refresh the page to show updated screening status
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    const errorData = await response.json();
+                    this.addLog(`Failed to start screening: ${errorData.message || 'Unknown error'}`, 'text-red-400');
+                }
+            } catch (error) {
+                console.error('Error starting screening:', error);
+                this.addLog(`An error occurred: ${error.message}`, 'text-red-400');
+            }
+        },
+
+        async loadProjectStatistics() {
+            // Get project ID from URL
+            const urlMatch = window.location.pathname.match(/\/project\/(\d+)/);
+            if (!urlMatch) {
+                this.addLog('No project ID found in URL', 'text-yellow-400');
+                return;
+            }
+            
+            const projectId = urlMatch[1];
+            
+            try {
+                const response = await fetch(`/api/screening/project/${projectId}/statistics`);
+                const data = await response.json();
+                
+                // Update statistics directly from API response
+                this.projectStats = {
+                    total_articles: data.total_articles || 0,
+                    screened_articles: data.screened_articles || 0,
+                    included_articles: data.included_articles || 0,
+                    excluded_articles: data.excluded_articles || 0,
+                    pending_articles: data.pending_articles || 0
+                };
+                this.addLog(`Statistics loaded: ${data.total_articles} total articles, ${data.pending_articles} pending`, 'text-green-400');
+            } catch (error) {
+                console.error('Error loading project statistics:', error);
+                this.addLog(`Error loading statistics: ${error.message}`, 'text-red-400');
+            }
         },
 
         loadConfiguration() {
