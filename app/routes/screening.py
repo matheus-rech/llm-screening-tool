@@ -247,7 +247,7 @@ def start_screening():
                                         'agreement_analysis': agreement_analysis,
                                         'human_review_triggers': human_review_triggers
                                     }
-                                    db.session.commit()
+                                    # db.session.commit() # Consider committing outside the loop or in batches
 
                                 processed_count += 1
                                 logger.info(f"Processed article {article.id} ({processed_count}/{len(articles)})")
