@@ -40,10 +40,9 @@ class Project(db.Model):
     # Relationships
     articles = db.relationship('Article', backref='project_ref', lazy=True, cascade='all, delete-orphan')
 
-    # import html  # Used for HTML escaping to prevent XSS vulnerabilities
-    # import html
-        return f'<Project {html.escape(self.name)}>'
-        return f'<Project {html.escape(self.name)}>'
+    def __repr__(self):
+        """String representation of Project."""
+        return f'<Project {self.name}>'
 
     @property
     def has_screening_results(self):
