@@ -55,13 +55,13 @@ def setup_page():
             <div class="container mx-auto p-8">
                 <h1 class="text-3xl font-bold mb-8">LLM Screening Setup - Test Mode</h1>
                 <p class="text-red-600 mb-4">Template error: {str(e)}</p>
-                
+
                 <div class="bg-white rounded-lg p-6 mb-8">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Model Parameters</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">OpenAI Temperature</label>
-                            <input type="number" min="0" max="2" step="0.1" value="0.1" 
+                            <input type="number" min="0" max="2" step="0.1" value="0.1"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg">
                         </div>
                         <div>
@@ -81,7 +81,7 @@ def setup_page():
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="bg-green-50 rounded-lg p-6">
                     <h3 class="text-lg font-semibold text-green-900 mb-2">✅ Dynamic Model Configuration Test</h3>
                     <p class="text-green-700">The temperature and seed controls are now visible and functional!</p>
@@ -94,18 +94,18 @@ def setup_page():
 
 @modern_screening_bp.route('/start', methods=['POST'])
 def start_screening():
-    """Initialize a new modern screening project."""
-    
+    """Initialize a new modern screening project and trigger automatic processing."""
+
     data = request.get_json()
     if not data:
         raise ValidationError("No configuration data provided")
-    
+
     # Validate required fields
     required_fields = ['researchQuestion', 'picott', 'inclusionCriteria', 'exclusionCriteria', 'llmConfig']
     for field in required_fields:
         if field not in data:
             raise ValidationError(f"Missing required field: {field}")
-    
+
     # Create screening criteria from configuration
     try:
         criteria = ScreeningCriteria(
@@ -117,11 +117,15 @@ def start_screening():
             target_time_frame=data['picott'].get('timeFrame', ''),
             target_study_types=data['picott'].get('studyTypes', '').split(',') if data['picott'].get('studyTypes') else [],
             inclusion_criteria=data['inclusionCriteria'],
-            exclusion_criteria=data['exclusionCriteria']
+            exclusion_criteria=data['exclusionCriteria'],
+            temperature=float(data['llmConfig'].get('temperature', 0.1)),
+            seed=int(data['llmConfig']['seed']) if data['llmConfig'].get('seed') else None,
+            openai_model=data['llmConfig'].get('openaiModel', 'gpt-4o'),
+            anthropic_model=data['llmConfig'].get('anthropicModel', 'claude-3-5-sonnet-20241022')
         )
     except Exception as e:
         raise ValidationError(f"Invalid screening criteria: {str(e)}")
-    
+
     # Create or update project
     project_id = session.get('current_project_id')
     if project_id:
@@ -130,35 +134,189 @@ def start_screening():
             # Update existing project with modern screening config
             project.config = {
                 'modern_screening': True,
-                'criteria': criteria.__dict__,
+                'criteria': criteria.model_dump(),
                 'llm_config': data['llmConfig'],
-                'created_at': datetime.now().isoformat()
+                'created_at': datetime.now().isoformat(),
+                'auto_process': data.get('autoProcess', True)
             }
         else:
             raise ValidationError("Project not found")
     else:
         raise ValidationError("No active project found. Please upload articles first.")
-    
+
     # Store configuration
     db.session.commit()
-    
+
     # Initialize cost tracking (temporarily disabled)
     # cost_tracker.start_tracking(str(project_id))
-    
+
+    # **NEW: Trigger automatic screening if enabled**
+    if data.get('autoProcess', True):
+        try:
+            # Get pending articles count
+            pending_count = Article.query.filter_by(
+                project_id=project_id,
+                status='pending'
+            ).count()
+
+            if pending_count > 0:
+                # Start background processing
+                from threading import Thread
+
+                def process_articles_background():
+                    """Background processing of articles."""
+                    try:
+                        # Process articles in batches
+                        batch_size = min(5, pending_count)  # Start with small batch
+                        articles = Article.query.filter_by(
+                            project_id=project_id,
+                            status='pending'
+                        ).limit(batch_size).all()
+
+                        # Initialize orchestrator
+                        openai_key = os.getenv('OPENAI_API_KEY')
+                        anthropic_key = os.getenv('ANTHROPIC_API_KEY')
+
+                        if not openai_key or not anthropic_key:
+                            logger.error("Missing API keys for LLM providers")
+                            return
+
+                        orchestrator = DualProviderScreeningOrchestrator(
+                            openai_api_key=openai_key,
+                            anthropic_api_key=anthropic_key
+                        )
+
+                        processed_count = 0
+                        for article in articles:
+                            try:
+                                # Screen with both providers
+                                results = orchestrator.screen_article_dual_provider(
+                                    article, criteria, str(project_id)
+                                )
+
+                                openai_result = results.get('openai')
+                                anthropic_result = results.get('anthropic')
+
+                                # Analyze agreement
+                                if openai_result is not None and anthropic_result is not None:
+                                    agreement_analysis = orchestrator.analyze_provider_agreement(
+                                        openai_result, anthropic_result
+                                    )
+                                else:
+                                    agreement_analysis = {
+                                        'agreement': False,
+                                        'reason': 'One or both providers failed to return results',
+                                        'requires_human_review': True,
+                                        'decision_agreement': False,
+                                        'confidence_agreement': False,
+                                        'relevance_agreement': False,
+                                        'confidence_difference': 1.0,
+                                        'relevance_difference': 1.0
+                                    }
+
+                                # Check human review triggers
+                                if openai_result is not None and anthropic_result is not None:
+                                    human_review_triggers = HumanReviewTriggers.should_trigger_human_review(
+                                        openai_result, anthropic_result
+                                    )
+                                else:
+                                    human_review_triggers = {
+                                        'should_review': True,
+                                        'uncertainty_score': 1.0,
+                                        'triggers': ['One or both providers failed'],
+                                        'trigger_count': 1
+                                    }
+
+                                # Store results
+                                if openai_result is not None and anthropic_result is not None:
+                                    ScreeningResultsStore.store_screening_results(
+                                        str(article.id),
+                                        str(project_id),
+                                        openai_result,
+                                        anthropic_result,
+                                        agreement_analysis,
+                                        human_review_triggers
+                                    )
+                                else:
+                                    # Handle case where one or both providers failed
+                                    article.status = 'human_review_required'
+                                    article.decision_reasoning = {
+                                        'error': 'One or both LLM providers failed',
+                                        'timestamp': datetime.now().isoformat(),
+                                        'requires_human_review': True,
+                                        'agreement_analysis': agreement_analysis,
+                                        'human_review_triggers': human_review_triggers
+                                    }
+                                    db.session.commit()
+
+                                processed_count += 1
+                                logger.info(f"Processed article {article.id} ({processed_count}/{len(articles)})")
+
+                            except Exception as e:
+                                logger.error(f"Failed to process article {article.id}: {e}")
+                                # Mark article as needing human review
+                                article.status = 'human_review_required'
+                                article.decision_reasoning = {
+                                    'error': str(e),
+                                    'timestamp': datetime.now().isoformat(),
+                                    'requires_human_review': True
+                                }
+                                db.session.commit()
+
+                        logger.info(f"Background processing completed: {processed_count}/{len(articles)} articles processed")
+
+                    except Exception as e:
+                        logger.error(f"Background processing failed: {e}")
+
+                # Start background thread
+                thread = Thread(target=process_articles_background)
+                thread.daemon = True
+                thread.start()
+
+                logger.info(f"Started background processing for {pending_count} pending articles")
+
+                return jsonify({
+                    'success': True,
+                    'project_id': project_id,
+                    'message': f'Modern screening initialized and processing started for {pending_count} articles',
+                    'auto_processing': True,
+                    'pending_articles': pending_count
+                })
+            else:
+                return jsonify({
+                    'success': True,
+                    'project_id': project_id,
+                    'message': 'Modern screening initialized - no pending articles to process',
+                    'auto_processing': False,
+                    'pending_articles': 0
+                })
+
+        except Exception as e:
+            logger.error(f"Failed to start automatic processing: {e}")
+            # Still return success for configuration, but note processing issue
+            return jsonify({
+                'success': True,
+                'project_id': project_id,
+                'message': 'Modern screening initialized, but automatic processing failed to start',
+                'auto_processing': False,
+                'error': str(e)
+            })
+
     logger.info(f"Modern screening started for project {project_id}")
-    
+
     return jsonify({
         'success': True,
         'project_id': project_id,
-        'message': 'Modern screening initialized successfully'
+        'message': 'Modern screening initialized successfully',
+        'auto_processing': False
     })
 
 @modern_screening_bp.route('/interface/<project_id>')
 def screening_interface(project_id):
     """Render the modern screening interface."""
-    
+
     project = Project.query.get_or_404(project_id)
-    
+
     return render_template('modern_screening_interface.html', project=project)
 
 # ============================================================================
@@ -168,48 +326,48 @@ def screening_interface(project_id):
 @modern_screening_bp.route('/queue', methods=['GET'])
 def get_article_queue():
     """Get prioritized article queue for screening."""
-    
+
     strategy = request.args.get('strategy', 'ai_priority')
     limit = int(request.args.get('limit', 20))
     project_id = request.args.get('project_id')
-    
+
     if not project_id:
         project_id = session.get('current_project_id')
         if not project_id:
             raise ValidationError("No project specified")
-    
+
     # Get articles based on strategy
     query = Article.query.filter_by(project_id=project_id)
-    
+
     if strategy == 'ai_priority':
         # Prioritize uncertain cases and conflicts
         articles = query.filter(
             Article.status.in_(['pending', 'human_review_required', 'uncertain'])
         ).order_by(Article.created_at.desc()).limit(limit).all()
-        
+
     elif strategy == 'high_confidence':
         # Show high-confidence cases first
         articles = query.filter_by(status='pending').order_by(
             Article.created_at.desc()
         ).limit(limit).all()
-        
+
     elif strategy == 'low_confidence':
         # Show uncertain cases
         articles = query.filter(
             Article.status.in_(['uncertain', 'human_review_required'])
         ).limit(limit).all()
-        
+
     elif strategy == 'conflicts':
         # Show only conflicts
         articles = query.filter_by(status='human_review_required').limit(limit).all()
-        
+
     elif strategy == 'random':
         # Random order
         articles = query.filter_by(status='pending').order_by(db.func.random()).limit(limit).all()
-        
+
     else:
         articles = query.filter_by(status='pending').limit(limit).all()
-    
+
     # Format articles for frontend
     article_data = []
     for article in articles:
@@ -226,27 +384,27 @@ def get_article_queue():
             'confidence': None,
             'requires_human_review': article.status == 'human_review_required'
         }
-        
+
         # Extract AI predictions if available
         if article.decision_reasoning and isinstance(article.decision_reasoning, dict):
             reasoning = article.decision_reasoning
-            
+
             if 'openai_result' in reasoning and reasoning['openai_result']:
                 openai_data = reasoning['openai_result']
                 article_info['openai_prediction'] = openai_data.get('screening_decision', {}).get('final_decision')
-                
+
             if 'anthropic_result' in reasoning and reasoning['anthropic_result']:
                 anthropic_data = reasoning['anthropic_result']
                 article_info['anthropic_prediction'] = anthropic_data.get('screening_decision', {}).get('final_decision')
-                
+
             # Calculate average confidence
             if 'openai_result' in reasoning and 'anthropic_result' in reasoning:
                 openai_conf = reasoning['openai_result'].get('screening_decision', {}).get('confidence_score', 0)
                 anthropic_conf = reasoning['anthropic_result'].get('screening_decision', {}).get('confidence_score', 0)
                 article_info['confidence'] = (openai_conf + anthropic_conf) / 2
-        
+
         article_data.append(article_info)
-    
+
     return jsonify({
         'success': True,
         'articles': article_data,
@@ -257,9 +415,9 @@ def get_article_queue():
 @modern_screening_bp.route('/analysis/<article_id>', methods=['GET'])
 def get_analysis(article_id):
     """Get AI analysis results for a specific article."""
-    
+
     article = Article.query.get_or_404(article_id)
-    
+
     if not article.decision_reasoning:
         # No analysis available - trigger screening
         return jsonify({
@@ -268,9 +426,9 @@ def get_analysis(article_id):
             'analysis': None,
             'agreement': None
         })
-    
+
     reasoning = article.decision_reasoning
-    
+
     return jsonify({
         'success': True,
         'analysis': {
@@ -289,26 +447,26 @@ def get_analysis(article_id):
 @modern_screening_bp.route('/process/<article_id>', methods=['POST'])
 def process_article(article_id):
     """Process a single article with dual-provider screening."""
-    
+
     article = Article.query.get_or_404(article_id)
     project = Project.query.get_or_404(article.project_id)
-    
+
     # Get screening criteria from project config
     if not project.config or 'criteria' not in project.config:
         raise ValidationError("Project does not have modern screening configuration")
-    
+
     criteria_dict = project.config['criteria']
     criteria = ScreeningCriteria(**criteria_dict)
-    
+
     # Get model configuration from session or project config
     session_config = session.get('model_config', {})
     llm_config = project.config.get('llmConfig', {})
-    
+
     model1_config = session_config.get('model1', {})
     model2_config = session_config.get('model2', {})
-    
+
     from app.services.screening.dual_llm_screener import ModelConfig, DualModelConfig
-    
+
     # Create OpenAI configuration
     openai_config = ModelConfig(
         provider=model1_config.get('provider', 'openai'),
@@ -317,8 +475,8 @@ def process_article(article_id):
         seed=int(model1_config['seed']) if model1_config.get('seed') else llm_config.get('openaiSeed'),
         max_tokens=4000
     )
-    
-    # Create Anthropic configuration  
+
+    # Create Anthropic configuration
     anthropic_config = ModelConfig(
         provider=model2_config.get('provider', 'anthropic'),
         model_name=model2_config.get('model_name', 'claude-3-7-sonnet-20250219'),
@@ -326,50 +484,95 @@ def process_article(article_id):
         seed=int(model2_config['seed']) if model2_config.get('seed') else llm_config.get('anthropicSeed'),
         max_tokens=4000
     )
-    
+
     # Create dual model configuration
     dual_config = DualModelConfig(
         openai_config=openai_config,
         anthropic_config=anthropic_config
     )
-    
+
     # Initialize screening orchestrator with dynamic configuration
     import os
+    openai_key = os.getenv('OPENAI_API_KEY')
+    anthropic_key = os.getenv('ANTHROPIC_API_KEY')
+
+    if not openai_key or not anthropic_key:
+        raise ValidationError("Missing API keys for LLM providers")
+
     orchestrator = DualProviderScreeningOrchestrator(
-        openai_api_key=os.getenv('OPENAI_API_KEY'),
-        anthropic_api_key=os.getenv('ANTHROPIC_API_KEY'),
+        openai_api_key=openai_key,
+        anthropic_api_key=anthropic_key,
         config=dual_config
     )
-    
+
     try:
         # Screen with both providers
         results = orchestrator.screen_article_dual_provider(article, criteria, str(project.id))
-        
+
         # Analyze agreement
-        agreement_analysis = orchestrator.analyze_provider_agreement(
-            results.get('openai'), results.get('anthropic')
-        )
-        
-        # Check human review triggers
-        human_review_triggers = HumanReviewTriggers.should_trigger_human_review(
-            results.get('openai'), results.get('anthropic')
-        )
-        
-        # Store results
-        screening_record = ScreeningResultsStore.store_screening_results(
-            article_id,
-            str(project.id),
-            results.get('openai'),
-            results.get('anthropic'),
-            agreement_analysis,
-            human_review_triggers
-        )
-        
-        logger.info(f"Article {article_id} processed successfully")
-        
         openai_result = results.get('openai')
         anthropic_result = results.get('anthropic')
-        
+
+        if openai_result is not None and anthropic_result is not None:
+            agreement_analysis = orchestrator.analyze_provider_agreement(
+                openai_result, anthropic_result
+            )
+        else:
+            # Handle case where one or both providers failed
+            agreement_analysis = {
+                'agreement': False,
+                'reason': 'One or both providers failed to return results',
+                'requires_human_review': True,
+                'decision_agreement': False,
+                'confidence_agreement': False,
+                'relevance_agreement': False,
+                'confidence_difference': 1.0,
+                'relevance_difference': 1.0
+            }
+
+        # Check human review triggers and store results
+        if openai_result is not None and anthropic_result is not None:
+            human_review_triggers = HumanReviewTriggers.should_trigger_human_review(
+                openai_result, anthropic_result
+            )
+
+            # Store results
+            screening_record = ScreeningResultsStore.store_screening_results(
+                article_id,
+                str(project.id),
+                openai_result,
+                anthropic_result,
+                agreement_analysis,
+                human_review_triggers
+            )
+        else:
+            # Handle case where one or both providers failed
+            human_review_triggers = {
+                'should_review': True,
+                'uncertainty_score': 1.0,
+                'triggers': ['One or both providers failed'],
+                'trigger_count': 1
+            }
+
+            # Create a manual screening record for failed cases
+            screening_record = {
+                'final_decision': 'UNCERTAIN',
+                'requires_human_review': True
+            }
+
+            # Update article directly
+            article.status = 'human_review_required'
+            article.decision_reasoning = {
+                'error': 'One or both LLM providers failed',
+                'timestamp': datetime.now().isoformat(),
+                'requires_human_review': True,
+                'agreement_analysis': agreement_analysis,
+                'human_review_triggers': human_review_triggers
+            }
+            db.session.commit()
+
+        logger.info(f"Article {article_id} processed successfully")
+
         return jsonify({
             'success': True,
             'results': {
@@ -381,7 +584,7 @@ def process_article(article_id):
                 'requires_human_review': screening_record.get('requires_human_review')
             }
         })
-        
+
     except Exception as e:
         logger.error(f"Failed to process article {article_id}: {str(e)}")
         raise
@@ -389,20 +592,20 @@ def process_article(article_id):
 @modern_screening_bp.route('/decision', methods=['POST'])
 def save_human_decision():
     """Save human reviewer decision."""
-    
+
     data = request.get_json()
-    
+
     required_fields = ['article_id', 'decision']
     for field in required_fields:
         if field not in data:
             raise ValidationError(f"Missing required field: {field}")
-    
+
     article = Article.query.get_or_404(data['article_id'])
-    
+
     # Update article with human decision
     if not article.decision_reasoning:
         article.decision_reasoning = {}
-    
+
     article.decision_reasoning['human_decision'] = {
         'decision': data['decision'],
         'reasoning': data.get('reasoning', ''),
@@ -411,7 +614,7 @@ def save_human_decision():
         'timestamp': datetime.now().isoformat(),
         'reviewer_id': session.get('user_id', 'anonymous')
     }
-    
+
     # Update article status based on human decision
     if data['decision'] == 'INCLUDE':
         article.status = 'included'
@@ -419,57 +622,57 @@ def save_human_decision():
         article.status = 'excluded'
     else:
         article.status = 'uncertain'
-    
+
     db.session.commit()
-    
+
     logger.info(f"Human decision saved for article {data['article_id']}: {data['decision']}")
-    
+
     return jsonify({
         'success': True,
         'message': 'Decision saved successfully'
     })
 
 # ============================================================================
-# PROGRESS AND MONITORING ROUTES  
+# PROGRESS AND MONITORING ROUTES
 # ============================================================================
 
 @modern_screening_bp.route('/progress', methods=['GET'])
 def get_progress():
     """Get screening progress and statistics."""
-    
+
     project_id = request.args.get('project_id')
     if not project_id:
         project_id = session.get('current_project_id')
         if not project_id:
             raise ValidationError("No project specified")
-    
+
     # Get article counts
     total_articles = Article.query.filter_by(project_id=project_id).count()
-    
+
     processed_articles = Article.query.filter_by(project_id=project_id).filter(
         Article.status.in_(['included', 'excluded', 'uncertain', 'human_review_required'])
     ).count()
-    
+
     included_count = Article.query.filter_by(project_id=project_id, status='included').count()
     excluded_count = Article.query.filter_by(project_id=project_id, status='excluded').count()
     uncertain_count = Article.query.filter_by(project_id=project_id, status='uncertain').count()
     conflict_count = Article.query.filter_by(project_id=project_id, status='human_review_required').count()
-    
+
     # Get cost information (temporarily disabled)
     # current_costs = cost_tracker.get_current_costs(project_id)
     total_cost = 0.0  # current_costs.get('total_cost', 0.0) if current_costs else 0.0
-    
+
     # Calculate agreement rate
     agreement_rate = 0.0
     if processed_articles > 0:
         agreement_rate = (processed_articles - conflict_count) / processed_articles
-    
+
     # Provider status (simplified - assume healthy)
     provider_status = {
         'openai': True,
         'anthropic': True
     }
-    
+
     return jsonify({
         'success': True,
         'progress': {
@@ -488,12 +691,12 @@ def get_progress():
 @modern_screening_bp.route('/stats/<project_id>', methods=['GET'])
 def get_detailed_stats(project_id):
     """Get detailed statistics for a project."""
-    
+
     project = Project.query.get_or_404(project_id)
-    
+
     # Basic counts
     articles = Article.query.filter_by(project_id=project_id).all()
-    
+
     stats = {
         'total_articles': len(articles),
         'by_status': {},
@@ -501,16 +704,16 @@ def get_detailed_stats(project_id):
         'cost_breakdown': {},
         'agreement_analysis': {}
     }
-    
+
     # Count by status
     for article in articles:
         status = article.status
         stats['by_status'][status] = stats['by_status'].get(status, 0) + 1
-    
+
     # Calculate agreement metrics
     agreement_count = 0
     disagreement_count = 0
-    
+
     for article in articles:
         if article.decision_reasoning and isinstance(article.decision_reasoning, dict):
             agreement_data = article.decision_reasoning.get('agreement_analysis', {})
@@ -518,18 +721,18 @@ def get_detailed_stats(project_id):
                 agreement_count += 1
             else:
                 disagreement_count += 1
-    
+
     stats['agreement_analysis'] = {
         'agreements': agreement_count,
         'disagreements': disagreement_count,
         'rate': agreement_count / max(agreement_count + disagreement_count, 1)
     }
-    
+
     # Get cost breakdown (temporarily disabled)
     # cost_data = cost_tracker.get_current_costs(project_id)
     # if cost_data:
     #     stats['cost_breakdown'] = cost_data
-    
+
     return jsonify({
         'success': True,
         'stats': stats
@@ -542,25 +745,25 @@ def get_detailed_stats(project_id):
 @modern_screening_bp.route('/workflow/start', methods=['POST'])
 def start_workflow():
     """Start automated screening workflow."""
-    
+
     data = request.get_json()
     project_id = data.get('project_id')
     workflow_type = data.get('workflow_type', 'adaptive')
-    
+
     if not project_id:
         project_id = session.get('current_project_id')
         if not project_id:
             raise ValidationError("No project specified")
-    
+
     project = Project.query.get_or_404(project_id)
-    
+
     # Get screening criteria
     if not project.config or 'criteria' not in project.config:
         raise ValidationError("Project does not have modern screening configuration")
-    
+
     criteria_dict = project.config['criteria']
     criteria = ScreeningCriteria(**criteria_dict)
-    
+
     # Create workflow configuration
     workflow_config = WorkflowConfig(
         workflow_type=WorkflowType(workflow_type),
@@ -569,23 +772,29 @@ def start_workflow():
         enable_early_stopping=data.get('enable_early_stopping', True),
         max_budget=data.get('max_budget')
     )
-    
+
     # Start workflow (simplified - in production this would be async)
     import os
+    openai_key = os.getenv('OPENAI_API_KEY')
+    anthropic_key = os.getenv('ANTHROPIC_API_KEY')
+
+    if not openai_key or not anthropic_key:
+        raise ValidationError("Missing API keys for LLM providers")
+
     orchestrator = ScreeningWorkflowOrchestrator(
-        openai_api_key=os.getenv('OPENAI_API_KEY'),
-        anthropic_api_key=os.getenv('ANTHROPIC_API_KEY')
+        openai_api_key=openai_key,
+        anthropic_api_key=anthropic_key
     )
-    
+
     # Store workflow status
     session['active_workflow'] = {
         'project_id': project_id,
         'started_at': datetime.now().isoformat(),
         'workflow_type': workflow_type
     }
-    
+
     logger.info(f"Workflow started for project {project_id} with type {workflow_type}")
-    
+
     return jsonify({
         'success': True,
         'workflow_id': f"{project_id}-{datetime.now().timestamp()}",
@@ -600,7 +809,7 @@ def start_workflow():
 def get_model_config(project_id):
     """Get current model configuration for project."""
     project = Project.query.get_or_404(project_id)
-    
+
     # Get model configuration from project config
     if not project.config or 'llmConfig' not in project.config:
         # Return default configuration
@@ -615,7 +824,7 @@ def get_model_config(project_id):
                 'secondaryProvider': 'anthropic'
             }
         })
-    
+
     llm_config = project.config['llmConfig']
     return jsonify({
         'success': True,
@@ -633,10 +842,10 @@ def get_model_config(project_id):
 def save_model_config():
     """Save model configuration for dual-LLM screening."""
     data = request.get_json()
-    
+
     if not data:
         return jsonify({'success': False, 'error': 'No configuration data provided'}), 400
-    
+
     # Validate model configurations
     try:
         model1_config = ModelConfig(
@@ -646,7 +855,7 @@ def save_model_config():
             seed=int(data['model1']['seed']) if data['model1']['seed'] else None,
             max_tokens=4000
         )
-        
+
         model2_config = ModelConfig(
             provider=data['model2']['provider'],
             model_name=data['model2']['model_name'],
@@ -654,18 +863,18 @@ def save_model_config():
             seed=int(data['model2']['seed']) if data['model2']['seed'] else None,
             max_tokens=4000
         )
-        
+
         session['model_config'] = {
             'model1': data['model1'],
             'model2': data['model2']
         }
-        
+
         return jsonify({
             'success': True,
             'message': 'Model configuration saved successfully',
             'status': 'Configuration Updated'
         })
-        
+
     except Exception as e:
         return jsonify({
             'success': False,
@@ -676,10 +885,10 @@ def save_model_config():
 @modern_screening_bp.route('/config/models', methods=['GET'])
 def get_dual_model_config():
     """Get current dual model configuration."""
-    
+
     # Return session config or default configuration
     session_config = session.get('model_config', {})
-    
+
     default_config = {
         'model1': {
             'provider': 'openai',
@@ -688,18 +897,18 @@ def get_dual_model_config():
             'seed': None
         },
         'model2': {
-            'provider': 'anthropic', 
+            'provider': 'anthropic',
             'model_name': 'claude-3-5-sonnet-20241022',
             'temperature': 0.1,
             'seed': None
         }
     }
-    
+
     config = {
         'model1': {**default_config['model1'], **session_config.get('model1', {})},
         'model2': {**default_config['model2'], **session_config.get('model2', {})}
     }
-    
+
     return jsonify({
         'success': True,
         'config': config
@@ -709,12 +918,12 @@ def get_dual_model_config():
 def test_model_connection():
     """Test connection to LLM provider."""
     data = request.get_json()
-    
+
     if not data or 'config' not in data:
         return jsonify({'success': False, 'error': 'No configuration provided'}), 400
-    
+
     config_data = data['config']
-    
+
     try:
         model_config = ModelConfig(
             provider=config_data['provider'],
@@ -722,15 +931,15 @@ def test_model_connection():
             temperature=float(config_data['temperature']),
             seed=int(config_data['seed']) if config_data['seed'] else None
         )
-        
+
         if config_data['provider'] == 'openai':
             api_key = config_data.get('api_key') or current_app.config.get('OPENAI_API_KEY')
             if not api_key:
                 return jsonify({'success': False, 'status': 'Missing API Key', 'message': 'OpenAI API key required'})
-            
+
             from openai import OpenAI, APIError
             client = OpenAI(api_key=api_key)
-            
+
             try:
                 test_response = client.chat.completions.create(
                     model=config_data['model_name'],
@@ -741,7 +950,7 @@ def test_model_connection():
                     max_tokens=10,
                     temperature=0.1
                 )
-                
+
                 if test_response and test_response.choices:
                     return jsonify({'success': True, 'status': 'Connected', 'message': 'OpenAI connection successful'})
                 else:
@@ -752,10 +961,10 @@ def test_model_connection():
             api_key = config_data.get('api_key') or current_app.config.get('ANTHROPIC_API_KEY')
             if not api_key:
                 return jsonify({'success': False, 'status': 'Missing API Key', 'message': 'Anthropic API key required'})
-            
+
             from anthropic import Anthropic, APIError
             client = Anthropic(api_key=api_key)
-            
+
             try:
                 test_response = client.messages.create(
                     model=config_data['model_name'],
@@ -765,21 +974,21 @@ def test_model_connection():
                         {"role": "user", "content": "Hello, this is a connection test. Please respond with 'Connection successful'."}
                     ]
                 )
-                
+
                 if test_response and test_response.content:
                     return jsonify({'success': True, 'status': 'Connected', 'message': 'Anthropic connection successful'})
                 else:
                     return jsonify({'success': False, 'status': 'Connection Failed', 'message': 'Anthropic API call failed'})
             except Exception as e:
                 return jsonify({'success': False, 'status': 'Connection Failed', 'message': f'Anthropic API error: {e}'})
-        
+
         else:
             return jsonify({'success': True, 'status': 'Local Model', 'message': f'{config_data["provider"]} configured'})
-            
+
     except Exception as e:
         return jsonify({
-            'success': False, 
-            'status': 'Connection Failed', 
+            'success': False,
+            'status': 'Connection Failed',
             'message': f'Connection test failed: {str(e)}'
         })
 
@@ -787,10 +996,10 @@ def test_model_connection():
 def save_template():
     """Save current PICO-TT configuration as a template."""
     data = request.get_json()
-    
+
     if not data or 'name' not in data:
         return jsonify({'success': False, 'error': 'Template name required'}), 400
-    
+
     template_name = data['name']
     template_data = {
         'name': template_name,
@@ -805,7 +1014,7 @@ def save_template():
         'exclusion_criteria': data.get('exclusion_criteria', []),
         'created_at': datetime.now().isoformat()
     }
-    
+
     template_file = os.path.join(current_app.config['CONFIG_TEMPLATES_DIR'], f"{template_name}.json")
     try:
         with open(template_file, 'w') as f:
@@ -818,10 +1027,10 @@ def save_template():
 def load_template(template_name):
     """Load a saved template."""
     template_file = os.path.join(current_app.config['CONFIG_TEMPLATES_DIR'], f"{template_name}.json")
-    
+
     if not os.path.exists(template_file):
         return jsonify({'success': False, 'error': 'Template not found'}), 404
-    
+
     try:
         with open(template_file, 'r') as f:
             template_data = json.load(f)
@@ -834,13 +1043,13 @@ def list_templates():
     """List all available templates."""
     templates_dir = current_app.config['CONFIG_TEMPLATES_DIR']
     templates = []
-    
+
     if os.path.exists(templates_dir):
         for filename in os.listdir(templates_dir):
             if filename.endswith('.json'):
                 template_name = filename[:-5]  # Remove .json extension
                 templates.append(template_name)
-    
+
     return jsonify({'success': True, 'templates': templates})
 
 @modern_screening_bp.route('/project/<int:project_id>/statistics', methods=['GET'])
@@ -848,11 +1057,11 @@ def get_project_statistics(project_id):
     """Get project statistics for PRISMA flowchart."""
     try:
         from app.models.screening_models import Project, Article, PublicationSource
-        
+
         project = Project.query.get_or_404(project_id)
-        
+
         articles = Article.query.filter_by(project_id=project_id).all()
-        
+
         # Calculate statistics
         total_articles = len(articles)
         screened_articles = len([a for a in articles if a.status != 'pending'])
@@ -860,7 +1069,7 @@ def get_project_statistics(project_id):
         excluded_articles = len([a for a in articles if a.status == 'excluded'])
         pending_articles = len([a for a in articles if a.status == 'pending'])
         duplicate_articles = 0  # TODO: Implement duplicate detection
-        
+
         source_breakdown = {}
         for article in articles:
             pub_sources = PublicationSource.query.filter_by(article_id=article.id).all()
@@ -874,7 +1083,7 @@ def get_project_statistics(project_id):
                 if 'Unknown' not in source_breakdown:
                     source_breakdown['Unknown'] = 0
                 source_breakdown['Unknown'] += 1
-        
+
         return jsonify({
             'success': True,
             'total_articles': total_articles,
@@ -887,7 +1096,7 @@ def get_project_statistics(project_id):
             'project_name': project.name,
             'project_id': project_id
         })
-        
+
     except Exception as e:
         logger.error(f"Error fetching project statistics: {str(e)}")
         return jsonify({
