@@ -209,7 +209,6 @@ class ConfigurationManager:
             return config
             
         except TypeError as e:
-Research
             raise ValidationError(f"Invalid configuration data: {e}")
     
     def save_template(self, config: ProjectConfiguration, template_name: str) -> str:

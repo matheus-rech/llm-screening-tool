@@ -59,8 +59,8 @@ jobs:
       id: safety
       run: |
         echo "📦 Checking dependency security..."
-        safety check --json --output safety-report.json || true
-        if [ -s safety-report.json ] && [ "$(cat safety-report.json)" != "[]" ]; then
+        safety scan --json > safety-report.json || true
+        if [ -s safety-report.json ] && grep -q '"vulnerabilities"' safety-report.json && [ "$(jq '.vulnerabilities | length' safety-report.json 2>/dev/null || echo 0)" -gt 0 ]; then
           echo "DEPENDENCY_ISSUES=true" >> $GITHUB_ENV
         else
           echo "DEPENDENCY_ISSUES=false" >> $GITHUB_ENV

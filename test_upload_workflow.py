@@ -95,7 +95,6 @@ def test_file_parsing():
     
     return all_studies
 
-n8zf8q-codex/review-and-fix-workflow
 def test_file_parsing():
     """Test file parsing functionality with detailed output."""
     print("🔬 Testing File Parsing")
@@ -105,25 +104,11 @@ def test_file_parsing():
     assert len(all_studies) > 0, "No studies were parsed from the test files"
 
 def test_database_integration():
-=======
-@pytest.fixture
-def studies():
-    """Fixture that returns parsed studies for database tests."""
-    return test_file_parsing()
-
-def test_database_integration(studies=None):
- Research
     """Test database integration with parsed studies."""
     print("\n🗄️  Testing Database Integration")
     print("-" * 40)
     
-n8zf8q-codex/review-and-fix-workflow
     studies = parse_studies_from_files()
-
-    if studies is None:
-        studies = test_file_parsing()
-
- Research
     try:
         app = create_app()
         app.config['TESTING'] = True
