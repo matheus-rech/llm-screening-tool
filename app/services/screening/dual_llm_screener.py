@@ -255,14 +255,14 @@ Be thorough, precise, and conservative in your assessments. When in doubt, err o
             #     )
 
             # Parse the structured response
-+            response_content = response.choices[0].message.content
-+            try:
-+                result_dict = json.loads(response_content)
-+            except json.JSONDecodeError as e:
-+                # Handle invalid JSON gracefully (log, raise, or return a default/failure result)
-+                logger.error(f"Failed to parse OpenAI response as JSON: {e}\nResponse content: {response_content}")
-+                raise ValueError("Invalid JSON in OpenAI response") from e
-+            result = ComprehensiveScreeningResult(**result_dict)
+            response_content = response.choices[0].message.content
+            try:
+                result_dict = json.loads(response_content)
+            except json.JSONDecodeError as e:
+                # Handle invalid JSON gracefully (log, raise, or return a default/failure result)
+                logger.error(f"Failed to parse OpenAI response as JSON: {e}\nResponse content: {response_content}")
+                raise ValueError("Invalid JSON in OpenAI response") from e
+            result = ComprehensiveScreeningResult(**result_dict)
 
             # Add provider metadata
             result.llm_provider = self.provider_name

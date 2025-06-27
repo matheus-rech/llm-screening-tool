@@ -13,7 +13,7 @@ import logging
 import pandas as pd
 import rispy
 import bibtexparser
-from flask import Blueprint, render_template, request, redirect, url_for, send_from_directory, Response, stream_with_context, jsonify, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, send_from_directory, Response, stream_with_context, jsonify, send_file, session
 from werkzeug.utils import secure_filename
 
 from app.models.screening_models import db, Project, Article

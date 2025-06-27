@@ -268,10 +268,9 @@ def start_screening():
                     except Exception as e:
                         logger.error(f"Background processing failed: {e}")
 
-                # Start background thread
-                thread = Thread(target=process_articles_background)
-                thread.daemon = True
-                thread.start()
+                # Process articles with proper Flask application context
+                with current_app.app_context():
+                    process_articles_background()
 
                 logger.info(f"Started background processing for {pending_count} pending articles")
 
