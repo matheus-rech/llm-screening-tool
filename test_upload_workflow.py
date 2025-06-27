@@ -13,15 +13,39 @@ from app.models.screening_models import db, Project, Article
 from app import create_app
 from datetime import datetime, timezone
 
+def parse_studies_from_files():
+    """Helper function to parse studies from test files."""
+    test_files = ['test_citation_data.ris', 'test_records.ris']
+    all_studies = []
+    
+    for filename in test_files:
+        if os.path.exists(filename):
+            try:
+                with open(filename, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                studies = parse_ris_file(content)
+                
+                if len(studies) == 0:
+                    studies = parse_ris_manual(content)
+                
+                enhanced_studies = load_studies(content, filename)
+                
+                all_studies.extend(studies)
+                
+            except Exception as e:
+                continue
+    
+    return all_studies
+
 def test_file_parsing():
     """Test file parsing functionality with detailed output."""
     print("🔬 Testing File Parsing")
     print("-" * 40)
     
-    test_files = ['test_citation_data.ris', 'test_records.ris']
-    all_studies = []
+    all_studies = parse_studies_from_files()
     
-    for filename in test_files:
+    for filename in ['test_citation_data.ris', 'test_records.ris']:
         if os.path.exists(filename):
             print(f"\n📄 Testing file: {filename}")
             
@@ -58,21 +82,18 @@ def test_file_parsing():
                     else:
                         print(f"      ✅ Authors already string: {type(authors)}")
                 
-                all_studies.extend(studies)
-                
             except Exception as e:
                 print(f"   ❌ Error parsing {filename}: {e}")
                 continue
     
     assert len(all_studies) > 0, "No studies were parsed from the test files"
-    return all_studies
 
 def test_database_integration():
     """Test database integration with parsed studies."""
     print("\n🗄️  Testing Database Integration")
     print("-" * 40)
     
-    studies = test_file_parsing()
+    studies = parse_studies_from_files()
     try:
         app = create_app()
         app.config['TESTING'] = True
@@ -151,11 +172,11 @@ def test_database_integration():
                 print(f"        Year: {article.year}")
                 print("")
             
-            return len(pending_articles) > 0
+            assert len(pending_articles) > 0, "No pending articles found in database"
             
     except Exception as e:
         print(f"   ❌ Database integration test failed: {e}")
-        return False
+        assert False, f"Database integration test failed: {e}"
 
 def test_complete_workflow():
     """Test complete workflow from file parsing to database storage."""
@@ -164,19 +185,16 @@ def test_complete_workflow():
     print(f"Test started at: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
     print("")
     
-    studies = test_file_parsing()
+    studies = parse_studies_from_files()
     
     if not studies:
         print("\n❌ No studies parsed - workflow test failed")
-        return False
+        assert False, "No studies parsed - workflow test failed"
     
     print(f"\n✅ File parsing successful: {len(studies)} studies parsed")
     
-    db_success = test_database_integration()
-    
-    if not db_success:
-        print("\n❌ Database integration failed - workflow test failed")
-        return False
+    # Run database integration test
+    test_database_integration()
     
     print("\n✅ Database integration successful")
     
@@ -197,12 +215,11 @@ def test_complete_workflow():
     print("✨ The file upload workflow is working correctly!")
     
     assert True, "Complete workflow test passed"
-    return True
 
 if __name__ == "__main__":
     try:
-        success = test_complete_workflow()
-        sys.exit(0 if success else 1)
+        test_complete_workflow()
+        sys.exit(0)
     except Exception as e:
         print(f"\n💥 Unexpected error in workflow test: {e}")
         import traceback
