@@ -753,22 +753,25 @@ def test_model_connection():
             if not api_key:
                 return jsonify({'success': False, 'status': 'Missing API Key', 'message': 'Anthropic API key required'})
             
-            from anthropic import Anthropic
+            from anthropic import Anthropic, APIError
             client = Anthropic(api_key=api_key)
             
-            test_response = client.messages.create(
-                model=config_data['model_name'],
-                max_tokens=10,
-                temperature=0.1,
-                messages=[
-                    {"role": "user", "content": "Hello, this is a connection test. Please respond with 'Connection successful'."}
-                ]
-            )
-            
-            if test_response and test_response.content:
-                return jsonify({'success': True, 'status': 'Connected', 'message': 'Anthropic connection successful'})
-            else:
-                return jsonify({'success': False, 'status': 'Connection Failed', 'message': 'Anthropic API call failed'})
+            try:
+                test_response = client.messages.create(
+                    model=config_data['model_name'],
+                    max_tokens=10,
+                    temperature=0.1,
+                    messages=[
+                        {"role": "user", "content": "Hello, this is a connection test. Please respond with 'Connection successful'."}
+                    ]
+                )
+                
+                if test_response and test_response.content:
+                    return jsonify({'success': True, 'status': 'Connected', 'message': 'Anthropic connection successful'})
+                else:
+                    return jsonify({'success': False, 'status': 'Connection Failed', 'message': 'Anthropic API call failed'})
+            except Exception as e:
+                return jsonify({'success': False, 'status': 'Connection Failed', 'message': f'Anthropic API error: {e}'})
         
         else:
             return jsonify({'success': True, 'status': 'Local Model', 'message': f'{config_data["provider"]} configured'})
