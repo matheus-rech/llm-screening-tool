@@ -2,6 +2,7 @@
 
 import json
 import os
+import copy
 from typing import Dict, Any, List, Optional, Union
 from dataclasses import dataclass, asdict
 import copy
@@ -110,6 +111,16 @@ class ProjectConfiguration:
 class ConfigurationManager:
     """Enhanced configuration management system."""
     
+    # Default values for PICO criteria fields
+    PICO_DEFAULTS = {
+        'population': '',
+        'intervention': '',
+        'comparison': '',
+        'outcomes': '',
+        'time_frame': '',
+        'study_types': ''
+    }
+    
     SCHEMA = {
         "type": "object",
         "properties": {
@@ -140,8 +151,8 @@ class ConfigurationManager:
                     "max_retries": {"type": "integer", "minimum": 0},
                     "timeout": {"type": "integer", "minimum": 1},
                     "max_tokens": {"type": ["integer", "null"], "minimum": 1}
-                },
-                "required": ["api_key"]
+                }
+                # api_key optional for templates; validation ensures requirement
             },
             "processing": {
                 "type": "object",
@@ -178,7 +189,9 @@ class ConfigurationManager:
         now = datetime.now().isoformat()
         
         try:
-            pico = PICOCriteria(**pico_data)
+            pico_kwargs = {**self.PICO_DEFAULTS, **pico_data}
+            pico = PICOCriteria(**pico_kwargs)
+
             api = APIConfiguration(**api_data)
             processing = ProcessingConfiguration(**processing_data)
             
@@ -200,7 +213,8 @@ class ConfigurationManager:
             return config
             
         except TypeError as e:
-            raise ConfigurationError(f"Invalid configuration data: {e}")
+Research
+            raise ValidationError(f"Invalid configuration data: {e}")
     
     def save_template(self, config: ProjectConfiguration, template_name: str) -> str:
         """Save configuration as a template."""
@@ -233,10 +247,18 @@ class ConfigurationManager:
         try:
             with open(template_path, 'r') as f:
                 template_data = json.load(f)
+
             
             # Validate against a relaxed schema that allows missing API keys
             jsonschema.validate(template_data, self.TEMPLATE_SCHEMA)
             
+
+
+            # Validate against schema (API key optional for templates)
+            template_schema = copy.deepcopy(self.SCHEMA)
+            template_schema["properties"]["api"]["required"] = []
+            jsonschema.validate(template_data, template_schema)
+            Research
             return template_data
             
         except json.JSONDecodeError as e:
@@ -278,7 +300,8 @@ class ConfigurationManager:
         
         # Additional custom validation
         try:
-            pico = PICOCriteria(**config_dict.get('pico', {}))
+            pico_data = {**self.PICO_DEFAULTS, **config_dict.get('pico', {})}
+            pico = PICOCriteria(**pico_data)
             errors.extend(pico.validate())
         except TypeError as e:
             errors.append(f"Invalid PICO data: {e}")

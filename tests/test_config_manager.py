@@ -65,7 +65,9 @@ class TestConfigurationManager:
                 'population': '',  # Empty population
                 'intervention': 'Test',
                 'comparison': 'Test',
-                'outcomes': 'Test'
+                'outcomes': 'Test',
+                'time_frame': '',
+                'study_types': ''
             },
             'api_data': {
                 'api_key': ''  # Empty API key
@@ -131,7 +133,9 @@ class TestConfigurationManager:
                 'population': 'Adults',
                 'intervention': 'Drug',
                 'comparison': 'Placebo',
-                'outcomes': 'Recovery'
+                'outcomes': 'Recovery',
+                'time_frame': '6 months',
+                'study_types': 'RCT'
             },
             'api': {
                 'api_key': 'test-key'
