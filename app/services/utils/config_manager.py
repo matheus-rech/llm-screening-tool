@@ -16,8 +16,8 @@ class PICOCriteria:
     intervention: str
     comparison: str
     outcomes: str
-    time_frame: str
-    study_types: str
+    time_frame: str = ""
+    study_types: str = ""
     
     def validate(self) -> List[str]:
         """Validate PICO criteria and return list of errors."""
@@ -230,8 +230,10 @@ class ConfigurationManager:
             with open(template_path, 'r') as f:
                 template_data = json.load(f)
             
-            # Validate against schema
-            jsonschema.validate(template_data, self.SCHEMA)
+            # Validate against schema but allow templates without API keys
+            template_schema = json.loads(json.dumps(self.SCHEMA))
+            template_schema['properties']['api']['required'] = []
+            jsonschema.validate(template_data, template_schema)
             
             return template_data
             
