@@ -167,7 +167,18 @@ def parse_csv_file(csv_content: str) -> List[Dict]:
     file_like_object = io.StringIO(csv_content)
 
 def parse_csv_file(file_content: str) -> List[Dict]:
- n8zf8q-codex/review-and-fix-workflow
+
+    """Parse CSV content or read from a file path."""
+    studies = []
+
+    if os.path.isfile(file_content):
+        with open(file_content, "r", encoding="utf-8") as f:
+            file_like_object = io.StringIO(f.read())
+    else:
+        file_like_object = io.StringIO(file_content)
+
+
+
     """Parse CSV content or file path into study dictionaries."""
     studies = []
 
@@ -202,6 +213,7 @@ def parse_csv_file(file_content: str) -> List[Dict]:
 
     file_like_object = io.StringIO(file_content)
      Research
+    Research
     reader = csv.DictReader(file_like_object)
     for row in reader:
         authors = row.get("authors", "")

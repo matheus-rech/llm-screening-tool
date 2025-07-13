@@ -249,8 +249,15 @@ Research
                 template_data = json.load(f)
 
             
+
+            # Validate against schema but allow templates without API keys
+            template_schema = copy.deepcopy(self.SCHEMA)
+            template_schema['properties']['api']['required'] = []
+            jsonschema.validate(template_data, template_schema)
+
             # Validate against a relaxed schema that allows missing API keys
             jsonschema.validate(template_data, self.TEMPLATE_SCHEMA)
+     Research
             
 
 
