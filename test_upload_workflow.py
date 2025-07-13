@@ -72,7 +72,7 @@ def test_file_parsing():
 @pytest.fixture
 def studies():
     """Provide parsed studies for database tests."""
-    return test_file_parsing()
+    return parse_test_files()
 
 def test_database_integration(studies):
     """Test database integration with parsed studies."""
