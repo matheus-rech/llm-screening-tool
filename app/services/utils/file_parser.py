@@ -2,6 +2,7 @@ import csv
 import io
 import os
 import re
+import os
 import rispy
 import bibtexparser
 from lxml import etree
@@ -138,6 +139,33 @@ def parse_tsv_file(file_content: str) -> List[Dict]:
         })
     return studies
 
+
+def read_csv_from_file(file_path: str) -> str:
+    """
+    Reads the content of a CSV file from the given file path.
+
+    Args:
+        file_path (str): Path to the CSV file.
+
+    Returns:
+        str: Content of the CSV file as a string.
+    """
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return f.read()
+
+def parse_csv_file(csv_content: str) -> List[Dict]:
+    """
+    Parses CSV content and extracts study information.
+
+    Args:
+        csv_content (str): CSV content as a string.
+
+    Returns:
+        List[Dict]: List of dictionaries containing study information.
+    """
+    studies = []
+    file_like_object = io.StringIO(csv_content)
+
 def parse_csv_file(file_content: str) -> List[Dict]:
  n8zf8q-codex/review-and-fix-workflow
     """Parse CSV content or file path into study dictionaries."""
@@ -173,6 +201,7 @@ def parse_csv_file(file_content: str) -> List[Dict]:
      Research
 
     file_like_object = io.StringIO(file_content)
+     Research
     reader = csv.DictReader(file_like_object)
     for row in reader:
         authors = row.get("authors", "")

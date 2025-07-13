@@ -116,6 +116,8 @@ def test_database_integration(studies=None):
     """Test database integration with parsed studies."""
     print("\n🗄️  Testing Database Integration")
     print("-" * 40)
+
+    studies = test_file_parsing()
     
 n8zf8q-codex/review-and-fix-workflow
     studies = parse_studies_from_files()
@@ -223,8 +225,16 @@ def test_complete_workflow():
     
     print(f"\n✅ File parsing successful: {len(studies)} studies parsed")
     
+
+    db_success = test_database_integration()
+    
+    if not db_success:
+        print("\n❌ Database integration failed - workflow test failed")
+        return False
+
     # Run database integration test
     test_database_integration()
+        Research
     
     print("\n✅ Database integration successful")
     

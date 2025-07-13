@@ -5,6 +5,7 @@ import os
 import copy
 from typing import Dict, Any, List, Optional, Union
 from dataclasses import dataclass, asdict
+import copy
 from pathlib import Path
 import jsonschema
 from datetime import datetime
@@ -166,6 +167,9 @@ class ConfigurationManager:
         },
         "required": ["name", "pico", "api"]
     }
+
+    TEMPLATE_SCHEMA = copy.deepcopy(SCHEMA)
+    TEMPLATE_SCHEMA["properties"]["api"]["required"] = []
     
     def __init__(self, template_dir: str = "config_templates"):
         self.template_dir = Path(template_dir)
@@ -244,10 +248,17 @@ Research
             with open(template_path, 'r') as f:
                 template_data = json.load(f)
 
+            
+            # Validate against a relaxed schema that allows missing API keys
+            jsonschema.validate(template_data, self.TEMPLATE_SCHEMA)
+            
+
+
             # Validate against schema (API key optional for templates)
             template_schema = copy.deepcopy(self.SCHEMA)
             template_schema["properties"]["api"]["required"] = []
             jsonschema.validate(template_data, template_schema)
+            Research
             return template_data
             
         except json.JSONDecodeError as e:
