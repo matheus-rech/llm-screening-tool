@@ -1,6 +1,8 @@
 import csv
 import io
+import os
 import re
+import os
 import rispy
 import bibtexparser
 from lxml import etree
@@ -43,8 +45,8 @@ def parse_ris_file(file_content: str) -> List[Dict]:
                 "authors": ', '.join(authors) if isinstance(authors, list) else str(authors),
                 "year": entry.get("year", ""),
                 "journal_name": entry.get("journal_name", ""),
-                "pmid": entry.get("pmid", "")
-            })
+                "pmid": entry.get("pmid", ""
+                                  })
         return studies
     except Exception as e:
         print(f"rispy parsing failed, trying manual parsing: {e}")
@@ -137,7 +139,35 @@ def parse_tsv_file(file_content: str) -> List[Dict]:
         })
     return studies
 
+
+def read_csv_from_file(file_path: str) -> str:
+    """
+    Reads the content of a CSV file from the given file path.
+
+    Args:
+        file_path (str): Path to the CSV file.
+
+    Returns:
+        str: Content of the CSV file as a string.
+    """
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return f.read()
+
+def parse_csv_file(csv_content: str) -> List[Dict]:
+    """
+    Parses CSV content and extracts study information.
+
+    Args:
+        csv_content (str): CSV content as a string.
+
+    Returns:
+        List[Dict]: List of dictionaries containing study information.
+    """
+    studies = []
+    file_like_object = io.StringIO(csv_content)
+
 def parse_csv_file(file_content: str) -> List[Dict]:
+
     """Parse CSV content or read from a file path."""
     studies = []
 
@@ -147,6 +177,43 @@ def parse_csv_file(file_content: str) -> List[Dict]:
     else:
         file_like_object = io.StringIO(file_content)
 
+
+
+    """Parse CSV content or file path into study dictionaries."""
+    studies = []
+
+    # Check if input is a file path
+    if os.path.exists(file_content):
+        # Security check: prevent path traversal attacks
+        if ".." in file_content:
+            raise ValueError("Path traversal not allowed")
+        
+        # Allow relative paths and temp files (for testing)
+        if not os.path.isabs(file_content) or file_content.startswith('/tmp/'):
+            with open(file_content, "r", encoding="utf-8") as f:
+                file_content = f.read()
+        else:
+            # For absolute paths, ensure they're within allowed directories
+            resolved_path = os.path.abspath(file_content)
+            current_dir = os.path.abspath(".")
+            if resolved_path.startswith(current_dir):
+                with open(file_content, "r", encoding="utf-8") as f:
+                    file_content = f.read()
+            else:
+                raise ValueError("File path not allowed for security reasons")
+
+    """Parse CSV data from a file path or raw content."""
+    studies = []
+
+    # Allow passing a file path for convenience in tests
+    if os.path.exists(file_content) and "\n" not in file_content:
+        with open(file_content, "r", encoding="utf-8") as f:
+            file_content = f.read()
+     Research
+
+    file_like_object = io.StringIO(file_content)
+     Research
+    Research
     reader = csv.DictReader(file_like_object)
     for row in reader:
         authors = row.get("authors", "")
