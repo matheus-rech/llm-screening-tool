@@ -137,12 +137,31 @@ def parse_tsv_file(file_content: str) -> List[Dict]:
         })
     return studies
 
-def parse_csv_file(file_content: str) -> List[Dict]:
+def read_csv_from_file(file_path: str) -> str:
+    """
+    Reads the content of a CSV file from the given file path.
+
+    Args:
+        file_path (str): Path to the CSV file.
+
+    Returns:
+        str: Content of the CSV file as a string.
+    """
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return f.read()
+
+def parse_csv_file(csv_content: str) -> List[Dict]:
+    """
+    Parses CSV content and extracts study information.
+
+    Args:
+        csv_content (str): CSV content as a string.
+
+    Returns:
+        List[Dict]: List of dictionaries containing study information.
+    """
     studies = []
-    if os.path.isfile(file_content):
-        with open(file_content, 'r', encoding='utf-8') as f:
-            file_content = f.read()
-    file_like_object = io.StringIO(file_content)
+    file_like_object = io.StringIO(csv_content)
     reader = csv.DictReader(file_like_object)
     for row in reader:
         authors = row.get("authors", "")
